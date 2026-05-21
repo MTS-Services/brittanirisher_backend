@@ -34,7 +34,7 @@ class CreateVendorProfileDTO {
     this.speciality = data.speciality?.trim() || null;
     this.aboutMe = data.aboutMe?.trim() || null;
     this.coverImage = data.coverImage || null;
-    
+
     this.categoryId = data.categoryId;
     this.packageId = data.packageId || null;
 
@@ -45,11 +45,7 @@ class CreateVendorProfileDTO {
           badge: pkg.badge?.trim() || null,
           isActive: pkg.isActive !== undefined ? pkg.isActive : true,
           features: Array.isArray(pkg.features)
-            ? pkg.features.map((feat) => ({
-                name: feat.name?.trim(),
-                isIncluded:
-                  feat.isIncluded !== undefined ? feat.isIncluded : true,
-              }))
+            ? pkg.features.map((f) => f.trim())
             : [],
         }))
       : [];
@@ -64,6 +60,30 @@ class CreateVendorProfileDTO {
       aboutMe: this.aboutMe,
       coverImage: this.coverImage,
     };
+  }
+}
+
+class filterVendorDTO {
+  constructor(query = {}) {
+    this.page = parseInt(query.page) || 1;
+    this.limit = parseInt(query.limit) || 10;
+    this.sortBy = query.sortBy || 'createdAt';
+    this.sortOrder = query.sortOrder || 'desc';
+    this.search = query.search;
+    this.locationSearch = query.locationSearch;
+    this.category = query.category;
+    this.availableDate = query.availableDate;
+    this.minPrice =
+      query.minPrice !== undefined ? Number(query.minPrice) : undefined;
+    this.maxPrice =
+      query.maxPrice !== undefined ? Number(query.maxPrice) : undefined;
+  }
+
+  /**
+   * Get pagination offset
+   */
+  getOffset() {
+    return (this.page - 1) * this.limit;
   }
 }
 
@@ -118,4 +138,5 @@ module.exports = {
   CreateVendorProfileDTO,
   UpdateVendorProfileDTO,
   VendorProfileResponseDTO,
+  filterVendorDTO,
 };

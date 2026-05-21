@@ -11,6 +11,7 @@ const {
   createVendorProfileSchema,
   updateVendorProfileSchema,
   vendorProfileIdParamSchema,
+  vendorFilterQuerySchema,
 } = require('./vendorProfile.validator');
 const packageParseMiddleware = require('./vendorProfile.parseData');
 
@@ -18,7 +19,11 @@ const router = express.Router();
 const controller = new VendorProfileController();
 
 // Public routes
-router.get('/', controller.getVendorProfiles);
+router.get(
+  '/',
+  validateQuery(vendorFilterQuerySchema),
+  controller.getVendorProfiles,
+);
 
 router.get('/search', controller.searchVendorProfiles);
 
@@ -56,7 +61,7 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
-  authorize(['VENDOR', 'ADMIN']),
+  // authorize(['VENDOR', 'ADMIN']),
   validateParams(vendorProfileIdParamSchema),
   controller.deleteVendorProfile,
 );

@@ -39,6 +39,21 @@ const vendorProfileIdParamSchema = Joi.object({
   id: Joi.string().uuid().required(),
 });
 
+const vendorFilterQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(100).optional(),
+  sortBy: Joi.string()
+    .valid('createdAt', 'updatedAt', 'businessName', 'location')
+    .optional(),
+  sortOrder: Joi.string().valid('asc', 'desc').optional(),
+  search: Joi.string().trim().optional(),
+  locationSearch: Joi.string().trim().optional(),
+  category: Joi.string().trim().optional(),
+  availableDate: Joi.date().iso().optional(),
+  minPrice: Joi.number().min(0).optional(),
+  maxPrice: Joi.number().min(0).optional(),
+});
+
 const userIdParamSchema = Joi.object({
   userId: Joi.string().trim().required(),
 });
@@ -47,5 +62,6 @@ module.exports = {
   createVendorProfileSchema,
   updateVendorProfileSchema,
   vendorProfileIdParamSchema,
+  vendorFilterQuerySchema,
   userIdParamSchema,
 };

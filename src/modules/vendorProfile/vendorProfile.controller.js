@@ -4,6 +4,7 @@ const {
   CreateVendorProfileDTO,
   UpdateVendorProfileDTO,
   VendorProfileResponseDTO,
+  filterVendorDTO,
 } = require('./vendorProfile.dto');
 
 class VendorProfileController {
@@ -30,29 +31,22 @@ class VendorProfileController {
   });
 
   getVendorProfiles = asyncHandler(async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
+    const filterDTO = new filterVendorDTO(req.query);
 
-    const result = await this.vendorProfileService.getVendorProfiles(
-      limit,
-      offset,
+    const result = await this.vendorProfileService.getVendorProfiles(filterDTO);
+
+    res.sendSuccess(
+      result.data,
+      'Vendor profiles retrieved successfully',
+      result.pagination,
     );
-
-    res.sendSuccess(result.data, 'Vendor profiles retrieved successfully', {
-      ...result.pagination,
-      page,
-    });
   });
 
   getVendorProfileById = asyncHandler(async (req, res) => {
     const result = await this.vendorProfileService.getVendorProfileById(
       req.params.id,
     );
-    res.sendSuccess(
-      new VendorProfileResponseDTO(result),
-      'Vendor profile retrieved successfully',
-    );
+    res.sendSuccess(result, 'Vendor profile retrieved successfully');
   });
 
   getMyVendorProfile = asyncHandler(async (req, res) => {
