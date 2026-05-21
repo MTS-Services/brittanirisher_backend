@@ -10,6 +10,8 @@ const jobRoutes = require('../modules/job/job.route');
 const uploadRoutes = require('../modules/upload/upload.route');
 const categoryRoutes = require('../modules/category/category.route');
 const weddingStyleRoutes = require('../modules/weddingStyle/weddingStyle.route');
+const subscriptionPlanRoutes = require('../modules/subscriptionPlan/subscriptionPlan.route');
+const vendorProfileRoutes = require('../modules/vendorProfile/vendorProfile.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -38,5 +40,7 @@ router.use('/job', jobRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/wedding-styles', weddingStyleRoutes);
+router.use('/subscription-plans', subscriptionPlanRoutes);
+router.use('/vendor-profiles', vendorProfileRoutes);
 
 module.exports = router;

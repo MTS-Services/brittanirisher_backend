@@ -123,6 +123,7 @@ model WeddingStyle {
 model SubscriptionPlan {
   id              String               @id @default(uuid())
   planName        String
+  sortDescription String?
   priceMonthly    Decimal              @db.Decimal(10, 2)
   portfolioLimit  Int                  @default(10)
   featuresAllowed Json
