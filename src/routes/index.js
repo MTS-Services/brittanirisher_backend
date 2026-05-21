@@ -9,6 +9,7 @@ const userRoutes = require('../modules/user/user.routes');
 const jobRoutes = require('../modules/job/job.route');
 const uploadRoutes = require('../modules/upload/upload.route');
 const categoryRoutes = require('../modules/category/category.route');
+const weddingStyleRoutes = require('../modules/weddingStyle/weddingStyle.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -36,5 +37,6 @@ router.use('/users', userRoutes);
 router.use('/job', jobRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/categories', categoryRoutes);
+router.use('/wedding-styles', weddingStyleRoutes);
 
 module.exports = router;
