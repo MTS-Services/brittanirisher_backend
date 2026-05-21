@@ -29,12 +29,21 @@ const authenticate = async (req, res, next) => {
       select: {
         id: true,
         email: true,
-        firstName: true,
-        lastName: true,
+        name: true,
         role: true,
         status: true,
         createdAt: true,
         updatedAt: true,
+        vendorProfile: {
+          select: {
+            id: true,
+          },
+        },
+        coupleProfile: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -43,8 +52,20 @@ const authenticate = async (req, res, next) => {
       return res.sendUnauthorized('User not found');
     }
 
+    const sendUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      status: user.status,
+
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      vendorProfileId: user.vendorProfile ? user.vendorProfile.id : null,
+      coupleProfileId: user.coupleProfile ? user.coupleProfile.id : null,
+    };
     // Add user to request object
-    req.user = user;
+    req.user = sendUser;
     req.token = token;
 
     logger.debug(`User authenticated: ${user.email} (${user.role})`);

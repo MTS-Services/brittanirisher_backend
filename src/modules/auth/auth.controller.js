@@ -5,11 +5,9 @@
 const { asyncHandler } = require('../../middlewares/errorHandler');
 const AuthService = require('./auth.service');
 const {
-  RegisterDTO,
   LoginDTO,
   RefreshTokenDTO,
   ChangePasswordDTO,
-  UpdateProfileDTO,
   ForgotPasswordDTO,
   ResetPasswordDTO,
   VerifyOtpDTO,
@@ -28,11 +26,10 @@ class AuthController {
    * @example POST /api/v1/auth/register
    */
   register = asyncHandler(async (req, res) => {
-    const registerDTO = new RegisterDTO(req.body);
-    const result = await this.authService.register(registerDTO);
+    const result = await this.authService.register(req.body);
 
-    logger.audit(null, 'User Registration', `User: ${registerDTO.email}`, {
-      role: registerDTO.role,
+    logger.audit(null, 'User Registration', `User: ${req.body.email}`, {
+      role: req.body.role,
       ip: req.ip,
     });
 
@@ -128,17 +125,10 @@ class AuthController {
    * @example PUT /api/v1/auth/profile
    */
   updateProfile = asyncHandler(async (req, res) => {
-    const updateProfileDTO = new UpdateProfileDTO(req.body);
-
-    console.log('==================================', updateProfileDTO);
-
-    const result = await this.authService.updateProfile(
-      req.user.id,
-      updateProfileDTO,
-    );
+    const result = await this.authService.updateProfile(req.user.id, req.body);
 
     logger.audit(req.user.id, 'Profile Update', `User: ${req.user.email}`, {
-      updates: Object.keys(updateProfileDTO.getUpdateData()),
+      updates: Object.keys(req.body || {}),
       ip: req.ip,
     });
 
@@ -168,7 +158,7 @@ class AuthController {
   getCurrentUser = asyncHandler(async (req, res) => {
     const user = {
       id: req.user.id,
-      fullName: req.user.fullName,
+      name: req.user.name,
       email: req.user.email,
       role: req.user.role,
     };

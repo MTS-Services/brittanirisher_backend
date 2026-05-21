@@ -29,24 +29,13 @@ const strongPassword = Joi.string().min(8).max(128).required();
  * User registration validation schema
  */
 const registerSchema = Joi.object({
-  firstName: Joi.string().min(1).max(150).trim().required(),
-  lastName: Joi.string().min(1).max(150).trim().required(),
+  name: Joi.string().min(2).max(200).trim(),
+  firstName: Joi.string().min(1).max(150).trim(),
+  lastName: Joi.string().min(1).max(150).trim(),
   email,
   password: strongPassword,
-  role: Joi.string().valid('ADMIN', 'EMPLOYEE', 'USER').default('USER'),
-
-  // Optional User fields
-  phone: Joi.string()
-    .pattern(/^[\d\s+\-()+]+$/)
-    .min(7)
-    .max(20)
-    .optional(),
-  gender: Joi.string().valid('MALE', 'FEMALE', 'OTHER').optional(),
-  dateOfBirth: Joi.date().max('now').optional(),
-  companyLocation: Joi.string().max(200).trim().optional(),
-  headcount: Joi.string().max(100).trim().optional(),
-  location: Joi.string().max(200).trim().optional(),
-});
+  role: Joi.string().valid('COUPLE', 'VENDOR', 'ADMIN').default('COUPLE'),
+}).or('name', 'firstName');
 
 /**
  * User login validation schema
@@ -98,7 +87,9 @@ const resetPasswordSchema = Joi.object({
 
 const otpVerifySchema = Joi.object({
   email,
-  code: Joi.string().length(6).alphanum().uppercase().required(),
+  code: Joi.string()
+    .pattern(/^\d{6}$/)
+    .required(),
 });
 
 const resendOtpSchema = Joi.object({
@@ -110,26 +101,9 @@ const resendOtpSchema = Joi.object({
  * Update profile validation schema
  */
 const updateProfileSchema = Joi.object({
-  // --- User Table Fields ---
-  firstName: Joi.string().min(2).max(150).trim().optional(),
-  lastName: Joi.string().min(2).max(150).trim().optional(),
-  phone: Joi.string()
-    .pattern(/^[\d\s+\-()+]+$/)
-    .min(7)
-    .max(20)
-    .optional()
-    .messages({
-      'string.pattern.base': 'Phone number contains invalid characters.',
-    }),
-  avatarUrl: Joi.string().allow(null, '').optional(),
-  gender: Joi.string().valid('MALE', 'FEMALE', 'OTHER').optional(),
-  dateOfBirth: Joi.date().max('now').iso().optional(),
-  location: Joi.string().max(200).trim().allow(null, '').optional(),
-  teamClub: Joi.string().max(200).trim().allow(null, '').optional(),
-
-  // --- OrganizerProfile Table Fields ---
-  companyLocation: Joi.string().min(2).max(100).trim().optional(),
-  headcount: Joi.string().min(2).max(100).trim().optional(),
+  name: Joi.string().min(2).max(200).trim().optional(),
+  profileStep: Joi.number().integer().min(1).max(10).optional(),
+  isActive: Joi.boolean().optional(),
 });
 
 module.exports = {

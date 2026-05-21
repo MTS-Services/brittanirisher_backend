@@ -62,7 +62,24 @@ class AuthService {
 
   async register(registerDTO) {
     try {
-      const userData = registerDTO.toDatabase();
+      const userData =
+        typeof registerDTO.toDatabase === 'function'
+          ? registerDTO.toDatabase()
+          : {
+              ...registerDTO,
+              email: registerDTO.email?.toLowerCase(),
+              passwordHash: registerDTO.passwordHash || registerDTO.password,
+            };
+
+      const resolvedName =
+        userData.name ||
+        [userData.firstName, userData.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+      if (!resolvedName) {
+        throw new AppError('Name is required', 400);
+      }
 
       const existingUser = await this.authRepository.findUserByEmail(
         userData.email,
@@ -76,7 +93,9 @@ class AuthService {
         config.security.bcryptRounds,
       );
       const preparedUserData = {
-        ...userData,
+        name: resolvedName,
+        email: userData.email,
+        role: userData.role || 'COUPLE',
         passwordHash: hashedPassword,
         status: 'PENDING_VERIFICATION',
         emailVerified: false,
@@ -311,15 +330,23 @@ class AuthService {
 
   async updateProfile(userId, updateProfileDTO) {
     try {
-      // const updateData = updateProfileDTO.getUpdateData();
+      const updateData = {
+        ...(updateProfileDTO.name !== undefined
+          ? { name: updateProfileDTO.name }
+          : {}),
+        ...(updateProfileDTO.profileStep !== undefined
+          ? { profileStep: updateProfileDTO.profileStep }
+          : {}),
+        ...(updateProfileDTO.isActive !== undefined
+          ? { isActive: updateProfileDTO.isActive }
+          : {}),
+      };
 
-      // if (Object.keys(updateData).length === 0) {
-      //   throw new AppError('No fields to update', 400);
-      // }
-      const user = await this.authRepository.updateUser(
-        userId,
-        updateProfileDTO,
-      );
+      if (Object.keys(updateData).length === 0) {
+        throw new AppError('No fields to update', 400);
+      }
+
+      const user = await this.authRepository.updateUser(userId, updateData);
       logger.info(`Profile updated successfully for user: ${userId}`);
       return user;
     } catch (error) {

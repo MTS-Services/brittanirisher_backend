@@ -7,19 +7,13 @@ const logger = require('../../utils/logger');
 
 const USER_SELECT = {
   id: true,
-  firstName: true,
-  lastName: true,
+  name: true,
   email: true,
-  phone: true,
-  avatarUrl: true,
   role: true,
   status: true,
-  headcount: true,
-  companyLocation: true,
+  profileStep: true,
+  isActive: true,
   emailVerified: true,
-  gender: true,
-  dateOfBirth: true,
-  location: true,
   joinedAt: true,
   lastLoginAt: true,
   createdAt: true,
@@ -69,19 +63,6 @@ class AuthRepository {
         select: USER_SELECT,
       });
 
-      if (userData.role === 'USER') {
-        await prisma.profile.create({
-          data: {
-            userId: user.id,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            experienceYears: 0,
-            seniorityLevel: 'Junior',
-            availability: 'Immediate',
-          },
-        });
-      }
-
       logger.info(
         `User created successfully: ${userData.email} (${userData.role})`,
       );
@@ -93,8 +74,6 @@ class AuthRepository {
   }
 
   async updateUser(id, updateData) {
-    console.log('Updating user with data:', updateData); // Debug log to check updateData content
-
     try {
       const user = await prisma.user.update({
         where: { id },
@@ -168,7 +147,7 @@ class AuthRepository {
         by: ['role'],
         _count: { id: true },
       });
-      const result = { total: 0, admin: 0, organizer: 0, user: 0 };
+      const result = { total: 0, admin: 0, couple: 0, vendor: 0 };
       stats.forEach((stat) => {
         result.total += stat._count.id;
         result[stat.role.toLowerCase()] = stat._count.id;
