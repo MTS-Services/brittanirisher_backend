@@ -1,0 +1,380 @@
+// schema.prisma
+// =============================================================
+// Sports Event Management Platform — Prisma schema
+// Derived strictly from the existing React frontend 
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------
+
+enum Role {
+  COUPLE
+  VENDOR
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum OtpPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  LOGIN_2FA
+}
+
+// -----------------------------------------------------------------
+// AUTH / USERS
+// -----------------------------------------------------------------
+
+model User {
+  id            String        @id @default(cuid())
+  name          String
+  email         String        @unique
+  passwordHash  String
+  role          Role          @default(COUPLE)
+  status        AccountStatus @default(PENDING_VERIFICATION)
+  profileStep   Int           @default(1)
+  isActive      Boolean       @default(true)
+  emailVerified Boolean       @default(false)
+  joinedAt      DateTime      @default(now())
+  lastLoginAt   DateTime?
+
+  // Relations
+  otpTokens     OtpToken[]
+  sessions      Session[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  coupleProfile CoupleProfile?
+  vendorProfile VendorProfile?
+
+  @@index([role, status])
+}
+
+model Session {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String    @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model OtpToken {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash   String
+  purpose    OtpPurpose
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([userId, purpose])
+}
+
+// -----------------------------------------------------------------
+// Admin Profile
+// -----------------------------------------------------------------
+
+model Category {
+  id             String          @id @default(cuid())
+  name           String          @unique
+  slug           String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  coupleExpenses CoupleExpense[]
+  vendorProfiles VendorProfile[]
+}
+
+model WeddingStyle {
+  id             String          @id @default(cuid())
+  name           String          @unique
+  slug           String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  coupleProfiles CoupleProfile[]
+}
+
+model SubscriptionPlan {
+  id              String               @id @default(uuid())
+  planName        String
+  priceMonthly    Decimal              @db.Decimal(10, 2)
+  portfolioLimit  Int                  @default(10)
+  featuresAllowed Json
+  subscriptions   VendorSubscription[]
+
+  @@map("subscription_plans")
+}
+
+// -----------------------------------------------------------------
+// Couple Profile
+// -----------------------------------------------------------------
+
+model CoupleProfile {
+  id                  String               @id @default(uuid())
+  userId              String               @unique
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  eventDate           DateTime?
+  budget              Decimal?             @db.Decimal(10, 2)
+  weldingStyleId      String?
+  weldingStyle        WeddingStyle?        @relation(fields: [weldingStyleId], references: [id])
+  weldingDate         DateTime?
+  estimatedGuests     Int?
+  phone               String?
+  profileImage        String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  coupleExpenses      CoupleExpense[]
+  coupleTasks         CoupleTask[]
+  coupleTimelineTasks CoupleTimelineTask[]
+  weddingDaySchedules WeddingDaySchedule[]
+
+  @@map("couple_profiles")
+}
+
+model CoupleExpense {
+  id String @id @default(uuid())
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  vendorName  String?
+  vendorPhone String?
+  vendorEmail String?
+
+  amount Decimal @db.Decimal(10, 2)
+  note   String? @db.Text
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  coupleProfile   CoupleProfile @relation(fields: [coupleProfileId], references: [id])
+  coupleProfileId String
+
+  @@index([coupleProfileId])
+  @@index([categoryId])
+  @@map("couple_expenses")
+}
+
+model CoupleTask {
+  id String @id @default(uuid())
+
+  milestoneTitle String
+  taskName       String
+  isCompleted    Boolean @default(false)
+  isCustom       Boolean @default(false)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  coupleProfile   CoupleProfile @relation(fields: [coupleProfileId], references: [id])
+  coupleProfileId String
+
+  @@map("couple_tasks")
+}
+
+model CoupleTimelineTask {
+  id              String        @id @default(uuid())
+  coupleProfileId String
+  coupleProfile   CoupleProfile @relation(fields: [coupleProfileId], references: [id], onDelete: Cascade)
+
+  phaseTitle String?
+  taskName   String
+  dueDate    DateTime?
+  priority   String    @default("MEDIUM") // LOW, MEDIUM, HIGH
+  taskNotes  String?   @db.Text
+
+  isCompleted Boolean @default(false)
+  isCustom    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("couple_timeline_tasks")
+}
+
+model WeddingDaySchedule {
+  id              String        @id @default(uuid())
+  coupleProfileId String
+  coupleProfile   CoupleProfile @relation(fields: [coupleProfileId], references: [id], onDelete: Cascade)
+
+  eventName String
+  location  String
+  startTime String
+
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("wedding_day_schedules")
+}
+
+// -----------------------------------------------------------------
+// Vendor Profile
+// -----------------------------------------------------------------
+
+model VendorProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName    String
+  location        String
+  experienceYears String?
+  speciality      String?
+  aboutMe         String?  @db.Text
+  coverImage      String?
+  isVerified      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  categoryId      String
+  category        Category @relation(fields: [categoryId], references: [id])
+
+  packages        VendorPackage[]
+  portfolioImages VendorPortfolio[]
+  availabilities  VendorAvailability[]
+  enquiries       Enquiry[]
+  subscriptions   VendorSubscription[]
+  vendorBookings  VendorBooking[]
+
+  @@map("vendor_profiles")
+}
+
+// Vendor Portfolio Grid
+model VendorPortfolio {
+  id        String        @id @default(uuid())
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  mediaUrl  String
+  sortOrder Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  @@map("vendor_portfolios")
+}
+
+// Vendor Calendar / Booking Availability
+model VendorAvailability {
+  id          String             @id @default(uuid())
+  vendorId    String
+  vendor      VendorProfile      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  blockedDate DateTime           @db.Date
+  status      AvailabilityStatus @default(BOOKED)
+
+  @@map("vendor_availabilities")
+}
+
+enum AvailabilityStatus {
+  BOOKED
+  UNAVAILABLE
+}
+
+// Leads Management
+model Enquiry {
+  id          String        @id @default(uuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  senderName  String
+  senderPhone String
+  senderEmail String
+  message     String        @db.Text
+  status      EnquiryStatus @default(NEW)
+  createdAt   DateTime      @default(now())
+
+  @@map("enquiries")
+}
+
+enum EnquiryStatus {
+  NEW
+  PENDING
+  REPLIED
+  IGNORED
+  CONTRACTED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+model VendorSubscription {
+  id        String             @id @default(uuid())
+  vendorId  String
+  vendor    VendorProfile      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status    SubscriptionStatus @default(ACTIVE)
+  startsAt  DateTime           @default(now())
+  endsAt    DateTime
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@map("vendor_subscriptions")
+}
+
+model VendorPackage {
+  id               String        @id @default(uuid())
+  vendorId         String
+  vendor           VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  packageName      String
+  price            Decimal       @db.Decimal(10, 2)
+  badge            String?
+  shortDescription String?
+  features         Json
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@map("vendor_packages")
+}
+
+enum BookingStatus {
+  BOOKED
+  COMPLETED
+  CANCELED
+}
+
+model VendorBooking {
+  id String @id @default(uuid())
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  coupleName  String
+  email       String
+  phone       String
+  venueName   String
+  location    String
+  weddingDate DateTime
+  packageName String
+  price       Float
+
+  status BookingStatus @default(BOOKED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vendor_bookings")
+}
