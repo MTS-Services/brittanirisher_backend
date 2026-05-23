@@ -155,6 +155,7 @@ model CoupleProfile {
   coupleTasks         CoupleTask[]
   coupleTimelineTasks CoupleTimelineTask[]
   weddingDaySchedules WeddingDaySchedule[]
+  enquiries           Enquiry[]
 
   @@map("couple_profiles")
 }
@@ -294,9 +295,12 @@ enum AvailabilityStatus {
 
 // Leads Management
 model Enquiry {
-  id          String        @id @default(uuid())
-  vendorId    String
-  vendor      VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  id            String         @id @default(uuid())
+  vendorId      String
+  vendor        VendorProfile  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  profileId     String?
+  coupleProfile CoupleProfile? @relation(fields: [profileId], references: [id])
+
   senderName  String
   senderPhone String
   senderEmail String

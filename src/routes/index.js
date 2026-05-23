@@ -12,6 +12,7 @@ const categoryRoutes = require('../modules/category/category.route');
 const weddingStyleRoutes = require('../modules/weddingStyle/weddingStyle.route');
 const subscriptionPlanRoutes = require('../modules/subscriptionPlan/subscriptionPlan.route');
 const vendorProfileRoutes = require('../modules/vendorProfile/vendorProfile.route');
+const enquiryRoutes = require('../modules/enquiry/enquiry.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -42,5 +43,6 @@ router.use('/categories', categoryRoutes);
 router.use('/wedding-styles', weddingStyleRoutes);
 router.use('/subscription-plans', subscriptionPlanRoutes);
 router.use('/vendor-profiles', vendorProfileRoutes);
+router.use('/enquiries', enquiryRoutes);
 
 module.exports = router;
