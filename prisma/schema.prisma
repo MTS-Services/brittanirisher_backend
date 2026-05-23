@@ -341,16 +341,17 @@ model VendorSubscription {
 }
 
 model VendorPackage {
-  id               String        @id @default(uuid())
+  id               String          @id @default(uuid())
   vendorId         String
-  vendor           VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor           VendorProfile   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   packageName      String
-  price            Decimal       @db.Decimal(10, 2)
+  price            Decimal         @db.Decimal(10, 2)
   badge            String?
   shortDescription String?
   features         Json
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  vendorBookings   VendorBooking[]
 
   @@map("vendor_packages")
 }
@@ -373,8 +374,10 @@ model VendorBooking {
   venueName   String
   location    String
   weddingDate DateTime
-  packageName String
   price       Float
+
+  packageId String
+  package   VendorPackage @relation(fields: [packageId], references: [id])
 
   status BookingStatus @default(BOOKED)
 
