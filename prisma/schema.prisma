@@ -240,20 +240,22 @@ model WeddingDaySchedule {
 // -----------------------------------------------------------------
 
 model VendorProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  businessName    String
-  location        String
-  experienceYears String?
-  speciality      String?
-  aboutMe         String?  @db.Text
-  coverImage      String?
-  isVerified      Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  categoryId      String
-  category        Category @relation(fields: [categoryId], references: [id])
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName        String
+  location            String
+  phone               String?
+  highlightedServices String[]
+  experienceYears     String?
+  speciality          String?
+  aboutMe             String?  @db.Text
+  coverImage          String?
+  isVerified          Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  categoryId          String
+  category            Category @relation(fields: [categoryId], references: [id])
 
   packages        VendorPackage[]
   portfolioImages VendorPortfolio[]

@@ -50,10 +50,11 @@ router.get(
 );
 
 router.patch(
-  '/:id',
+  '/update',
   authenticate,
   authorize(['VENDOR', 'ADMIN']),
-  validateParams(vendorProfileIdParamSchema),
+  upload.array('images', 10),
+  packageParseMiddleware(),
   validate(updateVendorProfileSchema),
   controller.updateVendorProfile,
 );

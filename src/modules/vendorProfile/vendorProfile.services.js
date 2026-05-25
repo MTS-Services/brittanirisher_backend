@@ -11,6 +11,7 @@ class VendorProfileService {
       location,
       businessName,
       experienceYears,
+      highlightedServices,
       speciality,
       aboutMe,
       password,
@@ -71,6 +72,8 @@ class VendorProfileService {
           speciality,
           aboutMe,
           categoryId,
+          phone: data.phone,
+          highlightedServices,
           portfolioImages: {
             create: imageUrls.map((url, index) => ({
               mediaUrl: url,
@@ -370,39 +373,57 @@ class VendorProfileService {
     return profile;
   }
 
-  async updateVendorProfile(id, data) {
-    await this.getVendorProfileById(id);
+  async updateVendorProfile(id, imageUrls, data) {
+    const existingProfile = await this.getVendorProfileById(id);
+    const dtoData = {
+      ...data.toDatabase(),
+    };
 
-    // Verify category exists if being updated
-    if (data.categoryId) {
-      const category = await prisma.category.findUnique({
-        where: { id: data.categoryId },
-      });
-
-      if (!category) {
-        throw new AppError('Category not found', 404);
-      }
+    const userData = {};
+    if (dtoData.name !== undefined) {
+      userData.name = dtoData.name;
+      delete dtoData.name;
+    }
+    if (dtoData.email !== undefined) {
+      userData.email = dtoData.email?.toLowerCase();
+      delete dtoData.email;
     }
 
-    const updateData = {};
+    return prisma.$transaction(async (tx) => {
+      if (Object.keys(userData).length > 0) {
+        await tx.user.update({
+          where: { id: existingProfile.userId },
+          data: userData,
+        });
+      }
 
-    if (data.businessName !== undefined)
-      updateData.businessName = data.businessName;
-    if (data.location !== undefined) updateData.location = data.location;
-    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
-    if (data.experienceYears !== undefined)
-      updateData.experienceYears = data.experienceYears;
-    if (data.speciality !== undefined) updateData.speciality = data.speciality;
-    if (data.aboutMe !== undefined) updateData.aboutMe = data.aboutMe;
-    if (data.coverImage !== undefined) updateData.coverImage = data.coverImage;
-    if (data.isVerified !== undefined) updateData.isVerified = data.isVerified;
+      if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+        const lastPortfolioImage = await tx.vendorPortfolio.findFirst({
+          where: { vendorId: id },
+          select: { sortOrder: true },
+          orderBy: { sortOrder: 'desc' },
+        });
 
-    return prisma.vendorProfile.update({
-      where: { id },
-      data: updateData,
-      include: {
-        category: true,
-      },
+        const startSortOrder = lastPortfolioImage
+          ? lastPortfolioImage.sortOrder + 1
+          : 0;
+
+        await tx.vendorPortfolio.createMany({
+          data: imageUrls.map((url, index) => ({
+            vendorId: id,
+            mediaUrl: url,
+            sortOrder: startSortOrder + index,
+          })),
+        });
+      }
+
+      return tx.vendorProfile.update({
+        where: { id },
+        data: dtoData,
+        include: {
+          category: true,
+        },
+      });
     });
   }
 

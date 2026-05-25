@@ -61,9 +61,29 @@ class VendorProfileController {
 
   updateVendorProfile = asyncHandler(async (req, res) => {
     const dto = new UpdateVendorProfileDTO(req.body);
+
+    const vendorId = req.user.vendorProfileId;
+
+    if (!vendorId) {
+      return res.sendBadRequest('You do not have a vendor profile to update');
+    }
+
+    const hasBodyFields = Object.keys(req.body || {}).length > 0;
+    const hasImages = Array.isArray(req.files) && req.files.length > 0;
+
+    if (!hasBodyFields && !hasImages) {
+      return res.sendBadRequest(
+        'Provide at least one profile field or upload at least one image',
+      );
+    }
+
+    const imageUrls = hasImages
+      ? req.files.map((file) => `/uploads/${file.filename}`)
+      : [];
     const result = await this.vendorProfileService.updateVendorProfile(
-      req.params.id,
-      dto.toDatabase(),
+      vendorId,
+      imageUrls,
+      dto,
     );
     res.sendSuccess(
       new VendorProfileResponseDTO(result),

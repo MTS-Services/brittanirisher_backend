@@ -3,7 +3,9 @@ const Joi = require('joi');
 const createVendorProfileSchema = Joi.object({
   name: Joi.string().trim().min(2).max(150).required(),
   email: Joi.string().email().trim().required(),
+  phone: Joi.string().trim().optional(),
   location: Joi.string().trim().min(2).max(200).required(),
+  highlightedServices: Joi.array().items(Joi.string().trim()).optional(),
   businessName: Joi.string().trim().min(2).max(150).required(),
   experienceYears: Joi.string().trim().max(100).optional(),
   speciality: Joi.string().trim().max(150).optional(),
@@ -25,15 +27,16 @@ const createVendorProfileSchema = Joi.object({
 });
 
 const updateVendorProfileSchema = Joi.object({
-  businessName: Joi.string().trim().min(2).max(150).optional(),
+  name: Joi.string().trim().min(2).max(150).optional(),
+  email: Joi.string().email().trim().optional(),
+  phone: Joi.string().trim().optional(),
   location: Joi.string().trim().min(2).max(200).optional(),
-  categoryId: Joi.string().trim().optional(),
+  businessName: Joi.string().trim().min(2).max(150).optional(),
   experienceYears: Joi.string().trim().max(100).optional(),
   speciality: Joi.string().trim().max(150).optional(),
+  highlightedServices: Joi.array().items(Joi.string().trim()).optional(),
   aboutMe: Joi.string().trim().max(2000).optional(),
-  coverImage: Joi.string().uri().optional().allow(null, ''),
-  isVerified: Joi.boolean().optional(),
-}).min(1);
+});
 
 const vendorProfileIdParamSchema = Joi.object({
   id: Joi.string().uuid().required(),

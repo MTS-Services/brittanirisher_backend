@@ -34,7 +34,7 @@ class CreateVendorProfileDTO {
     this.speciality = data.speciality?.trim() || null;
     this.aboutMe = data.aboutMe?.trim() || null;
     this.coverImage = data.coverImage || null;
-
+    this.highlightedServices = Array.isArray(data.highlightedServices);
     this.categoryId = data.categoryId;
     this.packageId = data.packageId || null;
 
@@ -88,32 +88,43 @@ class filterVendorDTO {
 }
 
 class UpdateVendorProfileDTO {
-  constructor(data) {
-    this.businessName = data.businessName;
-    this.location = data.location;
-    this.categoryId = data.categoryId;
-    this.experienceYears = data.experienceYears;
-    this.speciality = data.speciality;
-    this.aboutMe = data.aboutMe;
-    this.coverImage = data.coverImage;
-    this.isVerified = data.isVerified;
+  constructor(data = {}) {
+    if (data.name !== undefined)
+      this.name = data.name ? data.name.trim() : null;
+    if (data.email !== undefined)
+      this.email = data.email ? data.email.trim() : null;
+    if (data.phone !== undefined)
+      this.phone = data.phone ? data.phone.trim() : null;
+    if (data.location !== undefined)
+      this.location = data.location ? data.location.trim() : null;
+    if (data.businessName !== undefined)
+      this.businessName = data.businessName ? data.businessName.trim() : null;
+    if (data.experienceYears !== undefined)
+      this.experienceYears = data.experienceYears
+        ? data.experienceYears.trim()
+        : null;
+    if (data.speciality !== undefined)
+      this.speciality = data.speciality ? data.speciality.trim() : null;
+
+    if (data.highlightedServices !== undefined) {
+      this.highlightedServices = Array.isArray(data.highlightedServices)
+        ? data.highlightedServices.map((service) => service.trim())
+        : [];
+    }
+
+    if (data.aboutMe !== undefined)
+      this.aboutMe = data.aboutMe ? data.aboutMe.trim() : null;
   }
 
   toDatabase() {
-    const updateData = {};
+    const dbData = {};
+    Object.keys(this).forEach((key) => {
+      if (this[key] !== undefined) {
+        dbData[key] = this[key];
+      }
+    });
 
-    if (this.businessName !== undefined)
-      updateData.businessName = this.businessName;
-    if (this.location !== undefined) updateData.location = this.location;
-    if (this.categoryId !== undefined) updateData.categoryId = this.categoryId;
-    if (this.experienceYears !== undefined)
-      updateData.experienceYears = this.experienceYears;
-    if (this.speciality !== undefined) updateData.speciality = this.speciality;
-    if (this.aboutMe !== undefined) updateData.aboutMe = this.aboutMe;
-    if (this.coverImage !== undefined) updateData.coverImage = this.coverImage;
-    if (this.isVerified !== undefined) updateData.isVerified = this.isVerified;
-
-    return updateData;
+    return dbData;
   }
 }
 
