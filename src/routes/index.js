@@ -14,6 +14,8 @@ const subscriptionPlanRoutes = require('../modules/subscriptionPlan/subscription
 const vendorProfileRoutes = require('../modules/vendorProfile/vendorProfile.route');
 const enquiryRoutes = require('../modules/enquiry/enquiry.route');
 const bookingRoutes = require('../modules/booking/booking.route');
+const vendorAvailabilityRoutes = require('../modules/vendorAvailability/vendorAvailability.route');
+const vendorPackageRoutes = require('../modules/vendorPackage/vendorPackage.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -46,5 +48,7 @@ router.use('/subscription-plans', subscriptionPlanRoutes);
 router.use('/vendor-profiles', vendorProfileRoutes);
 router.use('/enquiries', enquiryRoutes);
 router.use('/bookings', bookingRoutes);
+router.use('/vendor-availabilities', vendorAvailabilityRoutes);
+router.use('/vendor-package', vendorPackageRoutes);
 
 module.exports = router;
