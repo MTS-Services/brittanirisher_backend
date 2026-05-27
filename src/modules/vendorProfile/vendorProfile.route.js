@@ -102,10 +102,9 @@ router.post(
 );
 
 router.delete(
-  '/:id/portfolio/:imageId',
+  '/portfolio/:imageId',
   authenticate,
   authorize(['VENDOR', 'ADMIN']),
-  validateParams(vendorProfileIdParamSchema),
   controller.deletePortfolioImage,
 );
 

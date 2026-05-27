@@ -363,6 +363,10 @@ class VendorProfileService {
             status: true,
           },
         },
+        portfolioImages: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        packages: true,
       },
     });
 

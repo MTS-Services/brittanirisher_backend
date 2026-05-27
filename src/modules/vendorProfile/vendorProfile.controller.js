@@ -53,10 +53,7 @@ class VendorProfileController {
     const result = await this.vendorProfileService.getVendorProfileByUserId(
       req.user.id,
     );
-    res.sendSuccess(
-      new VendorProfileResponseDTO(result),
-      'Your vendor profile retrieved successfully',
-    );
+    res.sendSuccess(result, 'Your vendor profile retrieved successfully');
   });
 
   updateVendorProfile = asyncHandler(async (req, res) => {

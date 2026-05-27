@@ -16,6 +16,7 @@ const enquiryRoutes = require('../modules/enquiry/enquiry.route');
 const bookingRoutes = require('../modules/booking/booking.route');
 const vendorAvailabilityRoutes = require('../modules/vendorAvailability/vendorAvailability.route');
 const vendorPackageRoutes = require('../modules/vendorPackage/vendorPackage.route');
+const coupleProfileRoutes = require('../modules/coupleProfile/coupleProfile.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -50,5 +51,6 @@ router.use('/enquiries', enquiryRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/vendor-availabilities', vendorAvailabilityRoutes);
 router.use('/vendor-package', vendorPackageRoutes);
+router.use('/couple-profiles', coupleProfileRoutes);
 
 module.exports = router;
