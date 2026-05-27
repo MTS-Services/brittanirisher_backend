@@ -161,10 +161,10 @@ model CoupleProfile {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   coupleExpenses      CoupleExpense[]
-  coupleTasks         CoupleTask[]
   coupleTimelineTasks CoupleTimelineTask[]
   weddingDaySchedules WeddingDaySchedule[]
   enquiries           Enquiry[]
+  taskSections        TaskSection[]
 
   @@map("couple_profiles")
 }
@@ -192,6 +192,22 @@ model CoupleExpense {
   @@map("couple_expenses")
 }
 
+model TaskSection {
+  id    String @id @default(uuid())
+  title String
+  order Int
+
+  // Relations
+  coupleProfileId String
+  coupleProfile   CoupleProfile @relation(fields: [coupleProfileId], references: [id], onDelete: Cascade)
+  tasks           CoupleTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([coupleProfileId, title])
+}
+
 model CoupleTask {
   id String @id @default(uuid())
 
@@ -200,10 +216,10 @@ model CoupleTask {
   isCompleted    Boolean @default(false)
   isCustom       Boolean @default(false)
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  coupleProfile   CoupleProfile @relation(fields: [coupleProfileId], references: [id])
-  coupleProfileId String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  taskSection   TaskSection @relation(fields: [taskSectionId], references: [id], onDelete: Cascade)
+  taskSectionId String
 
   @@map("couple_tasks")
 }
