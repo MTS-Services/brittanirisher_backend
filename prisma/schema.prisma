@@ -165,6 +165,7 @@ model CoupleProfile {
   weddingDaySchedules WeddingDaySchedule[]
   enquiries           Enquiry[]
   taskSections        TaskSection[]
+  savedVendors        SavedVendor[]
 
   @@map("couple_profiles")
 }
@@ -260,6 +261,19 @@ model WeddingDaySchedule {
   @@map("wedding_day_schedules")
 }
 
+model SavedVendor {
+  id              String        @id @default(uuid())
+  coupleProfileId String
+  coupleProfile   CoupleProfile @relation(fields: [coupleProfileId], references: [id], onDelete: Cascade)
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("saved_vendors")
+}
+
 // -----------------------------------------------------------------
 // Vendor Profile
 // -----------------------------------------------------------------
@@ -289,6 +303,7 @@ model VendorProfile {
   enquiries       Enquiry[]
   subscriptions   VendorSubscription[]
   vendorBookings  VendorBooking[]
+  savedVendors    SavedVendor[]
 
   @@map("vendor_profiles")
 }

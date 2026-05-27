@@ -20,6 +20,7 @@ const coupleProfileRoutes = require('../modules/coupleProfile/coupleProfile.rout
 const coupleExpenseRoutes = require('../modules/coupleExpense/coupleExpense.route');
 const coupleTaskRoutes = require('../modules/taskSection/taskSection.route');
 const coupleWeddingScheduleRoutes = require('../modules/weddingDaySchedule/weddingDaySchedule.route');
+const saveVendorRoutes = require('../modules/saveVendor/saveVendor.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -58,5 +59,6 @@ router.use('/couple-profiles', coupleProfileRoutes);
 router.use('/couple-expense', coupleExpenseRoutes);
 router.use('/couple-checklist', coupleTaskRoutes);
 router.use('/couple-day-schedule', coupleWeddingScheduleRoutes);
+router.use('/save-vendor', saveVendorRoutes);
 
 module.exports = router;
