@@ -54,6 +54,10 @@ const addressSchema = Joi.object({
   area: Joi.string().max(100).optional(),
 });
 
+const IdParamSchema = Joi.object({
+  id: Joi.string().trim().required(),
+});
+
 // Irish PPS number validation
 const ppsNumber = Joi.string()
   .pattern(/^[0-9]{7}[A-Z]{1,2}$/)
@@ -186,6 +190,7 @@ module.exports = {
   phone,
   url,
   currency,
+  IdParamSchema,
 
   // Date patterns
   pastDate,

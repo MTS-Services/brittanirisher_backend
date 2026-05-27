@@ -113,6 +113,13 @@ class CoupleProfileService {
       prisma.coupleProfile.count({ where: finalWhere }),
     ]);
 
+    const updateData = coupleProfiles.map((profile) => ({
+      ...profile,
+      budget: Number(profile.budget),
+      expendBudget: Number(profile.expendBudget),
+      remainingBudget: profile.budget - profile.expendBudget,
+    }));
+
     return {
       data: coupleProfiles,
       pagination: {
@@ -134,7 +141,12 @@ class CoupleProfileService {
     if (!coupleProfile) {
       throw new AppError('Couple profile not found', 404);
     }
-    return coupleProfile;
+    return {
+      ...coupleProfile,
+      budget: Number(coupleProfile.budget),
+      expendBudget: Number(coupleProfile.expendBudget),
+      remainingBudget: coupleProfile.budget - coupleProfile.expendBudget,
+    };
   }
 
   async updateCoupleProfile(id, updateData) {
