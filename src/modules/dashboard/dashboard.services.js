@@ -142,6 +142,114 @@ class DashboardService {
 
     return chartData;
   }
+
+  async getAdminDashboardCardData() {
+    const [totalVendors, totalCouples, totalBookings] = await Promise.all([
+      prisma.vendorProfile.count(),
+      prisma.coupleProfile.count(),
+      prisma.vendorBooking.count(),
+    ]);
+
+    // const monthlyRevenueData = await prisma.payment.groupBy({
+    //   by: ['month'],
+    //   where: {
+    //     purchaseDate: {
+    //       gte: new Date(new Date().getFullYear(), 0, 1),
+    //       lte: new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999),
+    //     },
+    //   },
+    //   _sum: {
+    //     amount: true,
+    //   },
+    // });
+
+    const thisMonthRevenueData = await prisma.payment.aggregate({
+      where: {
+        purchaseDate: {
+          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          lte: new Date(
+            new Date().getFullYear(),
+            new Date().getMonth() + 1,
+            0,
+            23,
+            59,
+            59,
+            999,
+          ),
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    return {
+      totalVendors,
+      totalCouples,
+      totalBookings,
+      thisMonthRevenueData: thisMonthRevenueData._sum.amount || 0,
+    };
+  }
+
+  async getAdminChart(filter = 'this_year') {
+    const today = new Date();
+    let targetYear = today.getFullYear();
+
+    if (filter === 'previous_year') {
+      targetYear -= 1;
+    }
+
+    const startOfYear = new Date(targetYear, 0, 1);
+    const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+
+    const paymentsGrouped = await prisma.payment.groupBy({
+      by: ['purchaseDate'],
+      where: {
+        status: 'SUCCESS',
+        purchaseDate: {
+          gte: startOfYear,
+          lte: endOfYear,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const monthlyDataMap = monthNames.reduce((acc, month) => {
+      acc[month] = 0;
+      return acc;
+    }, {});
+
+    paymentsGrouped.forEach((group) => {
+      if (group.purchaseDate) {
+        const monthIndex = group.purchaseDate.getMonth();
+        const monthName = monthNames[monthIndex];
+        monthlyDataMap[monthName] += group._sum.amount || 0;
+      }
+    });
+
+    const chartData = monthNames.map((month) => ({
+      month,
+      revenue: Math.round(monthlyDataMap[month]),
+    }));
+
+    return chartData;
+  }
 }
 
 module.exports = DashboardService;

@@ -20,4 +20,18 @@ router.get(
   controller.getLeadVendorAnalytics,
 );
 
+router.get(
+  '/admin-card',
+  authenticate,
+  authorize(['ADMIN']),
+  controller.getAdminCard,
+);
+
+router.get(
+  '/admin-chart',
+  authenticate,
+  authorize(['ADMIN']),
+  controller.getAdminChart,
+);
+
 module.exports = router;

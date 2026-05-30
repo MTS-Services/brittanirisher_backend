@@ -28,6 +28,17 @@ class DashboardController {
     );
     res.sendSuccess(result, 'Dashboard data retrieved successfully');
   });
+
+  getAdminCard = asyncHandler(async (req, res) => {
+    const result = await this.dashboardService.getAdminDashboardCardData();
+    res.sendSuccess(result, 'Dashboard data retrieved successfully');
+  });
+
+  getAdminChart = asyncHandler(async (req, res) => {
+    const filter = req.query.filter || 'this_year';
+    const result = await this.dashboardService.getAdminChart(filter);
+    res.sendSuccess(result, 'Dashboard data retrieved successfully');
+  });
 }
 
 module.exports = DashboardController;
