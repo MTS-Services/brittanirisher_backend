@@ -22,6 +22,7 @@ const coupleTaskRoutes = require('../modules/taskSection/taskSection.route');
 const coupleWeddingScheduleRoutes = require('../modules/weddingDaySchedule/weddingDaySchedule.route');
 const saveVendorRoutes = require('../modules/saveVendor/saveVendor.route');
 const paymentRoutes = require('../modules/payment/payment.route');
+const DashboardRoutes = require('../modules/dashboard/dashboard.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -62,5 +63,5 @@ router.use('/couple-checklist', coupleTaskRoutes);
 router.use('/couple-day-schedule', coupleWeddingScheduleRoutes);
 router.use('/save-vendor', saveVendorRoutes);
 // router.use('/payment', paymentRoutes);
-
+router.use('/dashboard', DashboardRoutes);
 module.exports = router;

@@ -10,8 +10,9 @@ class VendorPackageService {
     });
   }
 
-  async getAllVendorPackages() {
+  async getAllVendorPackages(vendorId) {
     return prisma.vendorPackage.findMany({
+      where: { vendorId },
       orderBy: {
         createdAt: 'desc',
       },

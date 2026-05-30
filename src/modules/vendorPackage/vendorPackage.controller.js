@@ -19,7 +19,12 @@ class vendorPackageController {
   });
 
   getAllVendorPackages = asyncHandler(async (req, res) => {
-    const plans = await this.vendorPackageService.getAllVendorPackages();
+    const vendorId = req.user.vendorProfileId;
+    if (!vendorId) {
+      return res.status(404).json({ message: 'Vendor profile not found' });
+    }
+    const plans =
+      await this.vendorPackageService.getAllVendorPackages(vendorId);
     res.sendSuccess(plans, 'Vendor package retrieved successfully');
   });
 
