@@ -88,6 +88,20 @@ class VendorProfileController {
     );
   });
 
+  updateSubscriptionPlanChange = asyncHandler(async (req, res) => {
+    const { planId } = req.body;
+    const vendorId = req.user.vendorProfileId;
+    if (!vendorId) {
+      return res.sendBadRequest('You do not have a vendor profile to update');
+    }
+
+    const result = await this.vendorProfileService.vendorSubscriptionPlanChange(
+      vendorId,
+      planId,
+    );
+    res.sendSuccess(result, 'Vendor profile updated successfully');
+  });
+
   deleteVendorProfile = asyncHandler(async (req, res) => {
     await this.vendorProfileService.deleteVendorProfile(req.params.id);
     res.sendSuccess(null, 'Vendor profile deleted successfully');

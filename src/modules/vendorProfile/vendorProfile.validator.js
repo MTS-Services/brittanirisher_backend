@@ -61,10 +61,15 @@ const userIdParamSchema = Joi.object({
   userId: Joi.string().trim().required(),
 });
 
+const updateSubscriptionSchema = Joi.object({
+  planId: Joi.string().trim().required(),
+});
+
 module.exports = {
   createVendorProfileSchema,
   updateVendorProfileSchema,
   vendorProfileIdParamSchema,
   vendorFilterQuerySchema,
   userIdParamSchema,
+  updateSubscriptionSchema,
 };

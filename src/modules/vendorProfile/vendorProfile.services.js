@@ -736,6 +736,78 @@ class VendorProfileService {
       data: { coverImage: imageUrl },
     });
   }
+
+  async vendorSubscriptionPlanChange(vendorId, newPackageId) {
+    const vendorProfile = await this.getVendorProfileById(vendorId);
+    const currentSubscription = await prisma.vendorSubscription.findUnique({
+      where: { id: vendorProfile.currentSubscriptionId },
+      include: {
+        vendor: {
+          select: {
+            stripeCustomerId: true,
+            user: {
+              select: {
+                email: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!currentSubscription) {
+      throw new AppError('Current subscription not found', 404);
+    }
+    const newPlan = await prisma.subscriptionPlan.findUnique({
+      where: { id: newPackageId },
+    });
+
+    if (!newPlan) {
+      throw new AppError('New subscription plan not found', 404);
+    }
+
+    if (currentSubscription.planId === newPackageId) {
+      throw new AppError('Already subscribed to this plan', 400);
+    }
+
+    if (Number(newPlan.priceMonthly) > 0) {
+      return await this.paymentService.createSubscriptionUpdateSession({
+        vendorId,
+        currentSubscription,
+        newPlan,
+      });
+    } else {
+      const startsAt = new Date();
+      const endsAt = new Date();
+      endsAt.setDate(startsAt.getDate() + 30);
+
+      await prisma.$transaction(async (tx) => {
+        await tx.vendorSubscription.update({
+          where: { id: currentSubscription.id },
+          data: { status: 'INACTIVE' },
+        });
+        const newSubscription = await tx.vendorSubscription.create({
+          data: {
+            vendorId,
+            planId: newPackageId,
+            status: 'ACTIVE',
+            startsAt,
+            endsAt,
+          },
+        });
+        await tx.vendorProfile.update({
+          where: { id: vendorId },
+          data: {
+            currentSubscriptionId: newSubscription.id,
+            stripeCustomerId: null,
+          },
+        });
+      });
+    }
+
+    return newPlan;
+  }
 }
 
 module.exports = VendorProfileService;

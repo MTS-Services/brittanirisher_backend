@@ -8,7 +8,7 @@ class PaymentController {
     this.paymentService = new PaymentService();
   }
 
-  stripeWebhookHandler = asyncHandler((req, res) => {
+  stripeWebhookHandler = asyncHandler(async (req, res) => {
     const sig = req.headers['stripe-signature'];
     let event;
 
@@ -28,12 +28,24 @@ class PaymentController {
         const session = event.data.object;
         if (session.metadata?.isPaidRegistration === 'true') {
           try {
-            this.paymentService.handleSuccessfulRegistrationPayment(session);
+            await this.paymentService.handleSuccessfulRegistrationPayment(
+              session,
+            );
             console.log(
               `User and Vendor Profile successfully created for ${session.customer_email}`,
             );
           } catch (error) {
             console.error(`DB Error during webhook execution:`, error);
+            return res.status(500).send('Internal Server Error');
+          }
+        } else if (session.metadata?.isPlanUpdate === 'true') {
+          try {
+            await this.paymentService.handleSuccessfulPlanUpdate(session);
+            console.log(
+              `Subscription successfully upgraded for Vendor ID: ${session.metadata.vendorId}`,
+            );
+          } catch (error) {
+            console.error(`DB Error during plan update webhook:`, error);
             return res.status(500).send('Internal Server Error');
           }
         }

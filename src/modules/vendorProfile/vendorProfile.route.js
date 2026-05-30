@@ -12,6 +12,7 @@ const {
   updateVendorProfileSchema,
   vendorProfileIdParamSchema,
   vendorFilterQuerySchema,
+  updateSubscriptionSchema,
 } = require('./vendorProfile.validator');
 const packageParseMiddleware = require('./vendorProfile.parseData');
 
@@ -40,6 +41,14 @@ router.post(
   packageParseMiddleware(),
   validate(createVendorProfileSchema),
   controller.createVendorProfile,
+);
+
+router.post(
+  '/update-subscription',
+  authenticate,
+  authorize(['VENDOR']),
+  validate(updateSubscriptionSchema),
+  controller.updateSubscriptionPlanChange,
 );
 
 router.get(

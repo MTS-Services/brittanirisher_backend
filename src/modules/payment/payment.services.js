@@ -116,7 +116,7 @@ class PaymentService {
           aboutMe: meta.aboutMe,
           categoryId: meta.categoryId,
           phone: meta.phone,
-          // stripeCustomerId: session.customer,
+          stripeCustomerId: session.customer,
           highlightedServices,
           portfolioImages: {
             create: imageUrls.map((url, index) => ({
@@ -158,6 +158,148 @@ class PaymentService {
           amount: (session.amount_total || 0) / 100,
           status: 'SUCCESS',
           stripeIntentId: session.payment_intent || '',
+          purchaseDate: new Date(),
+        },
+      });
+    });
+  }
+
+  async createSubscriptionUpdateSession({
+    vendorId,
+    currentSubscription,
+    newPlan,
+  }) {
+    console.log(
+      'Creating subscription update session for vendorId:',
+      currentSubscription,
+    );
+
+    let stripeCustomerId = currentSubscription?.vendor?.stripeCustomerId;
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: currentSubscription.vendor.email,
+        name: currentSubscription.vendor.name,
+        metadata: {
+          vendorId: vendorId,
+        },
+      });
+
+      stripeCustomerId = customer.id;
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'subscription',
+      customer: stripeCustomerId,
+
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Subscribe to Professional Vendor Plan',
+            },
+            unit_amount: Number(newPlan.priceMonthly) * 100,
+            recurring: {
+              interval: 'month',
+            },
+          },
+          quantity: 1,
+        },
+      ],
+
+      metadata: {
+        isPlanUpdate: 'true',
+        vendorId: vendorId,
+        oldSubscriptionId: currentSubscription.id,
+        newPlanId: newPlan.id,
+      },
+      success_url: `${process.env.FRONTEND_URL}/dashboard/billing?success=true`,
+      cancel_url: `${process.env.FRONTEND_URL}/dashboard/billing?canceled=true`,
+    });
+
+    return {
+      requiresPayment: true,
+      url: session.url,
+    };
+  }
+
+  async handleSuccessfulPlanUpdate(session) {
+    const meta = session.metadata;
+    const stripeSubscriptionId = session.subscription;
+    const stripeInvoiceId = session.invoice;
+
+    // In subscription mode, payment_intent might be null. Fallback to invoice ID to prevent unique constraint crash.
+    const targetIntentId = session.payment_intent || stripeInvoiceId || '';
+
+    // 1. Prevent duplicate processing (Fixes Prisma P2002 Unique Constraint Error)
+    if (targetIntentId) {
+      const existingPayment = await prisma.payment.findUnique({
+        where: { stripeIntentId: targetIntentId },
+      });
+
+      // If payment already exists, acknowledge and exit early to prevent duplication
+      if (existingPayment) {
+        console.log(
+          `[Webhook] Payment ${targetIntentId} already processed. Skipping to avoid duplication.`,
+        );
+        return;
+      }
+    }
+
+    // 2. Extract precise subscription period dates provided by Stripe (converted from seconds to milliseconds)
+    const startsAt = session.current_period_start
+      ? new Date(session.current_period_start * 1000)
+      : new Date();
+
+    const endsAt = session.current_period_end
+      ? new Date(session.current_period_end * 1000)
+      : new Date();
+
+    // Fallback to default 30 days if Stripe period end timestamp is not present
+    if (!session.current_period_end) {
+      endsAt.setDate(startsAt.getDate() + 30);
+    }
+
+    // 3. Execute database operations inside a Prisma Transaction
+    await prisma.$transaction(async (tx) => {
+      // A. Expire the old subscription only if it exists (handles new vendors with no previous plan)
+      if (meta.oldSubscriptionId) {
+        await tx.vendorSubscription.update({
+          where: { id: meta.oldSubscriptionId },
+          data: { status: 'EXPIRED' },
+        });
+      }
+
+      // B. Create the new subscription record
+      const newSubscription = await tx.vendorSubscription.create({
+        data: {
+          vendorId: meta.vendorId,
+          planId: meta.newPlanId,
+          status: 'ACTIVE',
+          stripeSubscriptionId: stripeSubscriptionId,
+          startsAt,
+          endsAt,
+        },
+      });
+
+      // C. Update Vendor Profile with the new active subscription ID and sync stripeCustomerId
+      await tx.vendorProfile.update({
+        where: { id: meta.vendorId },
+        data: {
+          currentSubscriptionId: newSubscription.id,
+          stripeCustomerId: session.customer, // Save or sync the customer ID
+        },
+      });
+
+      // D. Log the payment history record securely
+      await tx.payment.create({
+        data: {
+          vendorId: meta.vendorId,
+          subscriptionId: newSubscription.id,
+          amount: (session.amount_total || 0) / 100, // Convert cents to dollars/main currency
+          status: 'SUCCESS',
+          stripeIntentId: targetIntentId,
           purchaseDate: new Date(),
         },
       });

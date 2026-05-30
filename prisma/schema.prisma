@@ -292,6 +292,7 @@ model VendorProfile {
   aboutMe               String?      @db.Text
   coverImage            String?
   currentSubscriptionId String?
+  stripeCustomerId      String?
   isVerified            Boolean      @default(false)
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt

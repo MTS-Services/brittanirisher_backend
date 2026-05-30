@@ -90,7 +90,7 @@ class SaveVendorService {
     const result = profiles.map((item) => {
       const vendor = item.vendor;
 
-      // ১. ভেন্ডরের সব প্যাকেজের প্রাইস থেকে মিক্সড বা মিনিমাম-ম্যাক্সিমাম বের করা
+
       const prices = vendor.packages
         .map((pkg) => pkg.price)
         .filter((price) => price != null);
