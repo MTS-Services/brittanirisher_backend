@@ -55,6 +55,7 @@ const vendorFilterQuerySchema = Joi.object({
   availableDate: Joi.date().iso().optional(),
   minPrice: Joi.number().min(0).optional(),
   maxPrice: Joi.number().min(0).optional(),
+  status: Joi.string().valid('PENDING', 'APPROVED', 'REJECTED').optional(),
 });
 
 const userIdParamSchema = Joi.object({

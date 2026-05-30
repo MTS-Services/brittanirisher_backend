@@ -73,6 +73,7 @@ class filterVendorDTO {
     this.locationSearch = query.locationSearch;
     this.category = query.category;
     this.availableDate = query.availableDate;
+    this.status = query.status;
     this.minPrice =
       query.minPrice !== undefined ? Number(query.minPrice) : undefined;
     this.maxPrice =

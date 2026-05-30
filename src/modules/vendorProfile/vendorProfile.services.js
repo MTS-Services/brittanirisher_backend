@@ -289,6 +289,7 @@ class VendorProfileService {
       availableDate,
       minPrice,
       maxPrice,
+      status,
     } = filterDTO;
 
     const offset = filterDTO.getOffset();
@@ -311,6 +312,10 @@ class VendorProfileService {
 
     if (category) {
       whereCondition.push({ category: { slug: category } });
+    }
+
+    if (status) {
+      whereCondition.push({ status: status });
     }
 
     if (availableDate) {
@@ -455,6 +460,145 @@ class VendorProfileService {
           low: lowestPackagePrice,
           high: highestPackagePrice,
         },
+      };
+    });
+
+    return {
+      data: normalizedProfiles,
+      pagination: {
+        currentPage: filterDTO.page,
+        itemsPerPage: filterDTO.limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / filterDTO.limit),
+        hasNextPage: filterDTO.page < Math.ceil(total / filterDTO.limit),
+        hasPreviousPage: filterDTO.page > 1,
+      },
+    };
+  }
+
+  async getVendorProfilesAdmin(filterDTO) {
+    const {
+      sortBy,
+      sortOrder,
+      search,
+      limit,
+      locationSearch,
+      category,
+      availableDate,
+      minPrice,
+      maxPrice,
+      status,
+    } = filterDTO;
+
+    const offset = filterDTO.getOffset();
+    const whereCondition = [];
+
+    if (search) {
+      whereCondition.push({
+        OR: [
+          { businessName: { contains: search, mode: 'insensitive' } },
+          { speciality: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    if (locationSearch) {
+      whereCondition.push({
+        OR: [{ location: { contains: locationSearch, mode: 'insensitive' } }],
+      });
+    }
+
+    if (category) {
+      whereCondition.push({ category: { slug: category } });
+    }
+
+    if (status) {
+      whereCondition.push({ status: status });
+    }
+
+    if (availableDate) {
+      const date = new Date(availableDate);
+      date.setHours(0, 0, 0, 0);
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      whereCondition.push({
+        NOT: {
+          availabilities: {
+            some: {
+              blockedDate: {
+                gte: date,
+                lt: nextDate,
+              },
+              status: {
+                in: ['BOOKED', 'UNAVAILABLE'],
+              },
+            },
+          },
+        },
+      });
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const priceFilter = {};
+      if (minPrice !== undefined && !Number.isNaN(minPrice)) {
+        priceFilter.gte = minPrice;
+      }
+      if (maxPrice !== undefined && !Number.isNaN(maxPrice)) {
+        priceFilter.lte = maxPrice;
+      }
+
+      whereCondition.push({
+        packages: {
+          some: {
+            price: priceFilter,
+          },
+        },
+      });
+    }
+
+    const finalWhere = whereCondition.length > 0 ? { AND: whereCondition } : {};
+
+    const [profiles, total] = await Promise.all([
+      prisma.vendorProfile.findMany({
+        where: finalWhere,
+        include: {
+          category: true,
+          currentSubscription: {
+            include: {
+              plan: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip: offset,
+        take: limit,
+      }),
+      prisma.vendorProfile.count({ where: finalWhere }),
+    ]);
+
+    const normalizedProfiles = profiles.map((profile) => {
+      return {
+        id: profile.id,
+        name: profile.user?.name || null,
+        email: profile.user?.email || null,
+        phone: profile.phone || null,
+        location: profile.location || null,
+        subscriptionPlan: profile.currentSubscription?.plan?.planName || null,
+        subscriptionStatus: profile.currentSubscription?.status || null,
+        price: profile.currentSubscription?.plan?.priceMonthly || null,
+        status: profile.status,
+        category: profile.category?.name || null,
+        joinedAt: profile.createdAt,
       };
     });
 

@@ -42,6 +42,19 @@ class VendorProfileController {
     );
   });
 
+  getVendorProfilesAdmin = asyncHandler(async (req, res) => {
+    const filterDTO = new filterVendorDTO(req.query);
+
+    const result =
+      await this.vendorProfileService.getVendorProfilesAdmin(filterDTO);
+
+    res.sendSuccess(
+      result.data,
+      'Vendor profiles retrieved successfully',
+      result.pagination,
+    );
+  });
+
   getVendorProfileById = asyncHandler(async (req, res) => {
     const result = await this.vendorProfileService.getVendorProfileById(
       req.params.id,

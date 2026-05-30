@@ -26,6 +26,12 @@ router.get(
   controller.getVendorProfiles,
 );
 
+router.get(
+  '/admin',
+  validateQuery(vendorFilterQuerySchema),
+  controller.getVendorProfilesAdmin,
+);
+
 router.get('/search', controller.searchVendorProfiles);
 
 router.get(
