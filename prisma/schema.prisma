@@ -130,6 +130,7 @@ model SubscriptionPlan {
   id              String               @id @default(uuid())
   planName        String
   sortDescription String?
+  stripePriceId   String?
   priceMonthly    Decimal              @db.Decimal(10, 2)
   portfolioLimit  Int                  @default(10)
   featuresAllowed Json
@@ -279,23 +280,24 @@ model SavedVendor {
 // -----------------------------------------------------------------
 
 model VendorProfile {
-  id                  String       @id @default(uuid())
-  userId              String       @unique
-  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  businessName        String
-  location            String
-  phone               String?
-  highlightedServices String[]
-  experienceYears     String?
-  speciality          String?
-  aboutMe             String?      @db.Text
-  coverImage          String?
-  isVerified          Boolean      @default(false)
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  status              VendorStatus @default(PENDING)
-  categoryId          String
-  category            Category     @relation(fields: [categoryId], references: [id])
+  id                    String       @id @default(uuid())
+  userId                String       @unique
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName          String
+  location              String
+  phone                 String?
+  highlightedServices   String[]
+  experienceYears       String?
+  speciality            String?
+  aboutMe               String?      @db.Text
+  coverImage            String?
+  currentSubscriptionId String?
+  isVerified            Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  status                VendorStatus @default(PENDING)
+  categoryId            String
+  category              Category     @relation(fields: [categoryId], references: [id])
 
   packages        VendorPackage[]
   portfolioImages VendorPortfolio[]
@@ -304,6 +306,7 @@ model VendorProfile {
   subscriptions   VendorSubscription[]
   vendorBookings  VendorBooking[]
   savedVendors    SavedVendor[]
+  payments        Payment[]
 
   @@map("vendor_profiles")
 }
@@ -368,19 +371,46 @@ enum SubscriptionStatus {
   CANCELED
 }
 
+enum PaymentStatus {
+  SUCCESS
+  PENDING
+  FAILED
+  REFUNDED
+}
+
 model VendorSubscription {
-  id        String             @id @default(uuid())
-  vendorId  String
-  vendor    VendorProfile      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  planId    String
-  plan      SubscriptionPlan   @relation(fields: [planId], references: [id])
-  status    SubscriptionStatus @default(ACTIVE)
-  startsAt  DateTime           @default(now())
-  endsAt    DateTime
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id                   String             @id @default(uuid())
+  vendorId             String
+  vendor               VendorProfile      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  planId               String
+  plan                 SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status               SubscriptionStatus @default(ACTIVE)
+  startsAt             DateTime           @default(now())
+  stripeSubscriptionId String?            @unique
+  endsAt               DateTime
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  payments             Payment[]
 
   @@map("vendor_subscriptions")
+}
+
+model Payment {
+  id             String              @id @default(uuid())
+  vendorId       String
+  vendor         VendorProfile       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   VendorSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  amount         Float
+  currency       String        @default("USD")
+  status         PaymentStatus @default(SUCCESS)
+  stripeIntentId String?       @unique
+
+  purchaseDate DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@map("payments")
 }
 
 model VendorPackage {

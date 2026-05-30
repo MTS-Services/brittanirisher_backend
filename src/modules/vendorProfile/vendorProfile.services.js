@@ -2,8 +2,137 @@ const { prisma } = require('../../config/database');
 const { AppError } = require('../../middlewares/errorHandler');
 const bcrypt = require('bcryptjs');
 const { generateTokenPair } = require('../../utils/jwt');
+const PaymentService = require('../payment/payment.services');
 
 class VendorProfileService {
+  // async createVendorProfile(imageUrls, data) {
+  //   const {
+  //     name,
+  //     email,
+  //     location,
+  //     businessName,
+  //     experienceYears,
+  //     highlightedServices,
+  //     speciality,
+  //     aboutMe,
+  //     password,
+  //     packages,
+  //     packageId,
+  //     categoryId,
+  //   } = data;
+
+  //   const existingUser = await prisma.user.findUnique({
+  //     where: { email: email.toLowerCase() },
+  //   });
+
+  //   if (existingUser) {
+  //     throw new AppError('Email already in use', 400);
+  //   }
+
+  //   if (!packageId) {
+  //     throw new AppError('packageId is required', 400);
+  //   }
+
+  //   const [category, subscriptionPlan] = await Promise.all([
+  //     prisma.category.findUnique({ where: { id: categoryId } }),
+  //     prisma.subscriptionPlan.findUnique({ where: { id: packageId } }),
+  //   ]);
+
+  //   if (!category) {
+  //     throw new AppError('Category not found', 404);
+  //   }
+
+  //   if (!subscriptionPlan) {
+  //     throw new AppError('Subscription plan not found', 404);
+  //   }
+
+  //   const hashedPassword = await bcrypt.hash(password, 10);
+  //   const startsAt = new Date();
+  //   const endsAt = new Date();
+  //   endsAt.setDate(startsAt.getDate() + 30);
+
+  //   const result = await prisma.$transaction(async (tx) => {
+  //     const user = await tx.user.create({
+  //       data: {
+  //         name,
+  //         email: email.toLowerCase(),
+  //         passwordHash: hashedPassword,
+  //         role: 'VENDOR',
+  //         status: 'ACTIVE',
+  //         isActive: true,
+  //         emailVerified: true,
+  //       },
+  //     });
+
+  //     const vendorProfile = await tx.vendorProfile.create({
+  //       data: {
+  //         userId: user.id,
+  //         businessName,
+  //         location,
+  //         experienceYears,
+  //         speciality,
+  //         aboutMe,
+  //         categoryId,
+  //         phone: data.phone,
+  //         highlightedServices,
+  //         portfolioImages: {
+  //           create: imageUrls.map((url, index) => ({
+  //             mediaUrl: url,
+  //             sortOrder: index,
+  //           })),
+  //         },
+  //         packages: {
+  //           create: (packages || []).map((pkg) => ({
+  //             packageName: pkg.packageName,
+  //             price: pkg.price,
+  //             badge: pkg.badge || null,
+  //             features: pkg.features || [],
+  //           })),
+  //         },
+  //       },
+  //     });
+
+  //     const subscription = await tx.vendorSubscription.create({
+  //       data: {
+  //         vendorId: vendorProfile.id,
+  //         planId: packageId,
+  //         status: 'ACTIVE',
+  //         startsAt,
+  //         endsAt,
+  //       },
+  //     });
+
+  //     const tokens = generateTokenPair(user);
+  //     await tx.session.create({
+  //       data: {
+  //         userId: user.id,
+  //         refreshToken: tokens.refreshToken,
+  //         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  //       },
+  //     });
+
+  //     return {
+  //       user: {
+  //         id: user.id,
+  //         name: user.name,
+  //         email: user.email,
+  //         role: user.role,
+  //         status: user.status,
+  //         emailVerified: user.emailVerified,
+  //         joinedAt: user.joinedAt,
+  //       },
+  //       accessToken: tokens.accessToken,
+  //       refreshToken: tokens.refreshToken,
+  //     };
+  //   });
+
+  //   return result;
+  // }
+
+  constructor() {
+    this.paymentService = new PaymentService();
+  }
+
   async createVendorProfile(imageUrls, data) {
     const {
       name,
@@ -19,6 +148,8 @@ class VendorProfileService {
       packageId,
       categoryId,
     } = data;
+
+    console.log('Creating vendor profile with data:', data);
 
     const existingUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -46,6 +177,20 @@ class VendorProfileService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    if (subscriptionPlan.priceMonthly > 0) {
+      // if (!subscriptionPlan.stripePriceId) {
+      //   throw new AppError('Stripe Price ID missing for this paid plan', 500);
+      // }
+
+      return await this.paymentService.createRegistrationCheckoutSession({
+        subscriptionPlan,
+        vendorData: data,
+        imageUrls,
+        hashedPassword,
+      });
+    }
+
     const startsAt = new Date();
     const endsAt = new Date();
     endsAt.setDate(startsAt.getDate() + 30);
@@ -101,6 +246,11 @@ class VendorProfileService {
         },
       });
 
+      await tx.vendorProfile.update({
+        where: { id: vendorProfile.id },
+        data: { currentSubscriptionId: subscription.id },
+      });
+
       const tokens = generateTokenPair(user);
       await tx.session.create({
         data: {
@@ -111,6 +261,7 @@ class VendorProfileService {
       });
 
       return {
+        requiresPayment: false,
         user: {
           id: user.id,
           name: user.name,
@@ -118,7 +269,6 @@ class VendorProfileService {
           role: user.role,
           status: user.status,
           emailVerified: user.emailVerified,
-          joinedAt: user.joinedAt,
         },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,

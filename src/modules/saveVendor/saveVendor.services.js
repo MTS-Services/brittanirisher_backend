@@ -86,6 +86,7 @@ class SaveVendorService {
       }),
       prisma.savedVendor.count({ where: finalWhere }),
     ]);
+    
     const result = profiles.map((item) => {
       const vendor = item.vendor;
 

@@ -34,7 +34,7 @@ class CreateVendorProfileDTO {
     this.speciality = data.speciality?.trim() || null;
     this.aboutMe = data.aboutMe?.trim() || null;
     this.coverImage = data.coverImage || null;
-    this.highlightedServices = Array.isArray(data.highlightedServices);
+    this.highlightedServices = data.highlightedServices || [];
     this.categoryId = data.categoryId;
     this.packageId = data.packageId || null;
 

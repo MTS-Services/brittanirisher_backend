@@ -10,6 +10,7 @@ const compression = require('compression');
 const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
+const paymentRoutes = require('./modules/payment/payment.route');
 
 const { errorHandler, notFound } = require('./middlewares/errorHandler');
 const { responseFormatter } = require('./middlewares/responseFormatter');
@@ -59,6 +60,7 @@ const limiter = rateLimit({
 });
 
 app.use('/api/', limiter);
+app.use('/api/v1/payment', paymentRoutes);
 
 // Compression middleware
 app.use(compression());
