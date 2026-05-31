@@ -131,9 +131,12 @@ model SubscriptionPlan {
   planName        String
   sortDescription String?
   stripePriceId   String?
+  validFor        String?
   priceMonthly    Decimal              @db.Decimal(10, 2)
   portfolioLimit  Int                  @default(10)
   featuresAllowed Json
+  isDeleted       Boolean              @default(false)
+  createdAt       DateTime             @default(now())
   subscriptions   VendorSubscription[]
 
   @@map("subscription_plans")

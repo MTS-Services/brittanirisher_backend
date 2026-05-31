@@ -5,6 +5,7 @@ class CreateSubscriptionPlanDTO {
     this.priceMonthly = data.priceMonthly;
     this.portfolioLimit = data.portfolioLimit;
     this.featuresAllowed = data.featuresAllowed;
+    this.validFor = data.validFor;
   }
 
   toDatabase() {
@@ -14,6 +15,7 @@ class CreateSubscriptionPlanDTO {
       priceMonthly: this.priceMonthly,
       portfolioLimit: this.portfolioLimit,
       featuresAllowed: this.featuresAllowed,
+      validFor: this.validFor,
     };
   }
 }
@@ -25,6 +27,7 @@ class UpdateSubscriptionPlanDTO {
     this.priceMonthly = data.priceMonthly;
     this.portfolioLimit = data.portfolioLimit;
     this.featuresAllowed = data.featuresAllowed;
+    this.validFor = data.validFor;
   }
 
   toDatabase() {
@@ -39,6 +42,7 @@ class UpdateSubscriptionPlanDTO {
       updateData.portfolioLimit = this.portfolioLimit;
     if (this.featuresAllowed !== undefined)
       updateData.featuresAllowed = this.featuresAllowed;
+    if (this.validFor !== undefined) updateData.validFor = this.validFor;
 
     return updateData;
   }

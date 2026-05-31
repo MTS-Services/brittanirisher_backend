@@ -9,6 +9,7 @@ class SubscriptionPlanService {
         priceMonthly: data.priceMonthly,
         portfolioLimit: data.portfolioLimit,
         featuresAllowed: data.featuresAllowed,
+        validFor: data.validFor,
         sortDescription: data.sortDescription.trim(),
       },
     });
@@ -16,6 +17,7 @@ class SubscriptionPlanService {
 
   async getSubscriptionPlans() {
     return prisma.subscriptionPlan.findMany({
+      where: { isDeleted: false },
       orderBy: { planName: 'asc' },
     });
   }
@@ -51,6 +53,7 @@ class SubscriptionPlanService {
       ...(data.sortDescription !== undefined
         ? { sortDescription: data.sortDescription.trim() }
         : {}),
+      ...(data.validFor !== undefined ? { validFor: data.validFor } : {}),
     };
 
     return prisma.subscriptionPlan.update({
@@ -62,8 +65,12 @@ class SubscriptionPlanService {
   async deleteSubscriptionPlan(id) {
     await this.getSubscriptionPlanById(id);
 
-    await prisma.subscriptionPlan.delete({
+    // await prisma.subscriptionPlan.delete({
+    //   where: { id },
+    // });
+    await prisma.subscriptionPlan.update({
       where: { id },
+      data: { isDeleted: true },
     });
 
     return true;
