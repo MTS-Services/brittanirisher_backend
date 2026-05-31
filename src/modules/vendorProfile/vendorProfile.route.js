@@ -27,6 +27,14 @@ router.get(
 );
 
 router.get(
+  '/couple',
+  authenticate,
+  authorize(['COUPLE']),
+  validateQuery(vendorFilterQuerySchema),
+  controller.getVendorProfileCouple,
+);
+
+router.get(
   '/admin',
   validateQuery(vendorFilterQuerySchema),
   controller.getVendorProfilesAdmin,

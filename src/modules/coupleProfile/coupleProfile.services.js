@@ -149,6 +149,25 @@ class CoupleProfileService {
     };
   }
 
+  async getCoupleProfileDashboard(id) {
+    const coupleProfile = await prisma.coupleProfile.findUnique({
+      where: { id },
+    });
+
+    if (!coupleProfile) {
+      throw new AppError('Couple profile not found', 404);
+    }
+
+    const remainingDate = coupleProfile.weldingDate - new Date();
+
+    return {
+      remainingDate: Math.ceil(remainingDate / (1000 * 60 * 60 * 24)),
+      budget: Number(coupleProfile.budget),
+      expendBudget: Number(coupleProfile.expendBudget),
+      remainingBudget: coupleProfile.budget - coupleProfile.expendBudget,
+    };
+  }
+
   async updateCoupleProfile(id, updateData) {
     const existingProfile = await prisma.coupleProfile.findUnique({
       where: { id },

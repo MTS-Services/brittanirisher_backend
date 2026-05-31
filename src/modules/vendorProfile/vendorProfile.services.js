@@ -4,6 +4,31 @@ const bcrypt = require('bcryptjs');
 const { generateTokenPair } = require('../../utils/jwt');
 const PaymentService = require('../payment/payment.services');
 
+function calculateLocationMatchScore(loc1, loc2) {
+  if (!loc1 || !loc2) return 0;
+  const words1 = loc1
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(Boolean);
+  const words2 = loc2
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words1.length === 0 || words2.length === 0) return 0;
+  let matchCount = 0;
+  words1.forEach((word) => {
+    if (words2.includes(word)) {
+      matchCount++;
+    }
+  });
+
+  const maxWords = Math.max(words1.length, words2.length);
+  return matchCount / maxWords;
+}
+
 class VendorProfileService {
   // async createVendorProfile(imageUrls, data) {
   //   const {
@@ -460,6 +485,238 @@ class VendorProfileService {
           low: lowestPackagePrice,
           high: highestPackagePrice,
         },
+      };
+    });
+
+    return {
+      data: normalizedProfiles,
+      pagination: {
+        currentPage: filterDTO.page,
+        itemsPerPage: filterDTO.limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / filterDTO.limit),
+        hasNextPage: filterDTO.page < Math.ceil(total / filterDTO.limit),
+        hasPreviousPage: filterDTO.page > 1,
+      },
+    };
+  }
+
+  async getVendorProfilesCouple(coupleId, filterDTO) {
+    const { sortBy, sortOrder, search, limit, category, status } = filterDTO;
+    let { locationSearch, availableDate, minPrice, maxPrice } = filterDTO;
+    const offset = filterDTO.getOffset();
+
+    let targetLocationForMatching = locationSearch || null;
+
+    // 1. Fetch default preferences from CoupleProfile
+    if (coupleId) {
+      const couple = await prisma.coupleProfile.findUnique({
+        where: { id: coupleId },
+        select: {
+          location: true,
+          weldingDate: true,
+          budget: true,
+        },
+      });
+
+      if (!couple) {
+        throw new AppError('Couple profile not found', 404);
+      }
+
+      if (!targetLocationForMatching && couple.location) {
+        targetLocationForMatching = couple.location;
+      }
+
+      if (!availableDate && couple.weldingDate) {
+        availableDate = couple.weldingDate;
+      }
+      if (maxPrice === undefined && couple.budget !== null) {
+        maxPrice = Number(couple.budget);
+      }
+    }
+
+    const whereCondition = [];
+
+    // 2. Filter: Search
+    if (search) {
+      whereCondition.push({
+        OR: [
+          { businessName: { contains: search, mode: 'insensitive' } },
+          { speciality: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    // 3. Filter: Strict Location 
+    if (locationSearch) {
+      whereCondition.push({
+        location: { contains: locationSearch, mode: 'insensitive' },
+      });
+    }
+
+    // 4. Filter: Category
+    if (category) {
+      whereCondition.push({ category: { slug: category } });
+    }
+
+    // 5. Filter: Status
+    if (status) {
+      whereCondition.push({ status: status });
+    } else {
+      whereCondition.push({ status: 'APPROVED' });
+    }
+
+    // 6. Filter: Availability
+    if (availableDate) {
+      const targetDate = new Date(availableDate);
+      targetDate.setUTCHours(0, 0, 0, 0);
+
+      whereCondition.push({
+        NOT: {
+          availabilities: {
+            some: {
+              blockedDate: targetDate,
+              status: { in: ['BOOKED', 'UNAVAILABLE'] },
+            },
+          },
+        },
+      });
+    }
+
+    // 7. Filter: Price Budget
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const priceFilter = {};
+      if (minPrice !== undefined && !Number.isNaN(Number(minPrice))) {
+        priceFilter.gte = Number(minPrice);
+      }
+      if (maxPrice !== undefined && !Number.isNaN(Number(maxPrice))) {
+        priceFilter.lte = Number(maxPrice);
+      }
+
+      whereCondition.push({
+        packages: {
+          some: {
+            price: priceFilter,
+          },
+        },
+      });
+    }
+
+    const finalWhere = whereCondition.length > 0 ? { AND: whereCondition } : {};
+
+    // 8. DB Query with Premium Vendors Boost
+    const [profiles, total] = await Promise.all([
+      prisma.vendorProfile.findMany({
+        where: finalWhere,
+        include: {
+          category: true,
+          currentSubscription: {
+            include: { plan: true },
+          },
+          portfolioImages: {
+            orderBy: { sortOrder: 'asc' },
+            take: 1,
+          },
+          packages: {
+            select: { id: true, packageName: true, price: true },
+          },
+          user: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: [
+          {
+            currentSubscription: {
+              plan: { priceMonthly: 'desc' },
+            },
+          },
+          {
+            [sortBy || 'createdAt']: sortOrder || 'desc',
+          },
+        ],
+        skip: offset,
+        take: limit,
+      }),
+      prisma.vendorProfile.count({ where: finalWhere }),
+    ]);
+
+    const normalizedProfiles = profiles.map((profile) => {
+      const packagePrices = (profile.packages || []).map((pkg) =>
+        Number(pkg.price),
+      );
+      const lowestPackagePrice = packagePrices.length
+        ? Math.min(...packagePrices)
+        : null;
+      const highestPackagePrice = packagePrices.length
+        ? Math.max(...packagePrices)
+        : null;
+
+      const weights = [];
+
+      if (search) {
+        const q = search.toLowerCase();
+        const hasMatch =
+          profile.businessName?.toLowerCase().includes(q) ||
+          profile.speciality?.toLowerCase().includes(q);
+        weights.push(hasMatch ? 1 : 0);
+      }
+
+      if (targetLocationForMatching) {
+        const locationScore = calculateLocationMatchScore(
+          profile.location,
+          targetLocationForMatching,
+        );
+        weights.push(locationScore);
+      }
+
+      if (category) {
+        weights.push(profile.category?.slug === category ? 1 : 0);
+      }
+
+      if (availableDate) {
+        weights.push(1);
+      }
+
+      if (minPrice !== undefined || maxPrice !== undefined) {
+        const minVal =
+          minPrice !== undefined ? Number(minPrice) : Number.NEGATIVE_INFINITY;
+        const maxVal =
+          maxPrice !== undefined ? Number(maxPrice) : Number.POSITIVE_INFINITY;
+        const intersects =
+          lowestPackagePrice !== null &&
+          highestPackagePrice !== null &&
+          highestPackagePrice >= minVal &&
+          lowestPackagePrice <= maxVal;
+        weights.push(intersects ? 1 : 0);
+      }
+      const matchPercentage =
+        weights.length === 0
+          ? 100
+          : Math.round(
+              (weights.reduce((sum, val) => sum + val, 0) / weights.length) *
+                100,
+            );
+
+      const isSaved =
+        Array.isArray(profile.savedVendors) && profile.savedVendors.length > 0;
+
+      return {
+        id: profile.id,
+        name: profile.user?.name || null,
+        businessName: profile.businessName,
+        email: profile.user?.email || null,
+        phone: profile.phone || null,
+        location: profile.location || null,
+        category: profile.category?.name || null,
+        matchPercentage,
+        isSaved,
+        thumbnailImage:
+          profile.coverImage || profile.portfolioImages?.[0]?.mediaUrl || null,
+        packagePriceRange: {
+          low: lowestPackagePrice,
+          high: highestPackagePrice,
+        },
+        subscriptionTierPrice: profile.currentSubscription?.plan?.price || 0,
       };
     });
 

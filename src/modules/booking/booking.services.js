@@ -34,38 +34,79 @@ class BookingService {
       this.ensurePackageValid(dto.packageId, dto.vendorId),
     ]);
 
-    return prisma.vendorBooking.create({
-      data: {
-        vendorId: dto.vendorId,
-        coupleName: dto.coupleName,
-        email: dto.email,
-        phone: dto.phone,
-        venueName: dto.venueName,
-        location: dto.location,
-        weddingDate: dto.weddingDate,
-        price: dto.price,
-        packageId: dto.packageId,
-        ...(dto.status ? { status: dto.status } : {}),
-      },
-      include: {
-        vendor: {
-          select: {
-            id: true,
-            businessName: true,
-            location: true,
-          },
-        },
-        package: {
-          select: {
-            id: true,
-            packageName: true,
-            price: true,
-          },
+    const targetedDate = new Date(dto.weddingDate);
+    const availability = await prisma.vendorAvailability.findUnique({
+      where: {
+        vendorId_blockedDate: {
+          vendorId: dto.vendorId,
+          blockedDate: targetedDate,
         },
       },
     });
-  }
 
+    if (
+      availability &&
+      (availability.status === 'UNAVAILABLE' ||
+        availability.status === 'BOOKED')
+    ) {
+      throw new AppError(
+        'The vendor is not available on the selected wedding date.',
+        400,
+      );
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      await tx.vendorAvailability.upsert({
+        where: {
+          vendorId_blockedDate: {
+            vendorId: dto.vendorId,
+            blockedDate: targetedDate,
+          },
+        },
+        update: {
+          status: 'BOOKED',
+        },
+        create: {
+          vendorId: dto.vendorId,
+          blockedDate: targetedDate,
+          status: 'BOOKED',
+        },
+      });
+
+      const newBooking = await tx.vendorBooking.create({
+        data: {
+          vendorId: dto.vendorId,
+          coupleName: dto.coupleName,
+          email: dto.email,
+          phone: dto.phone,
+          venueName: dto.venueName,
+          location: dto.location,
+          weddingDate: targetedDate,
+          price: dto.price,
+          packageId: dto.packageId,
+          ...(dto.status ? { status: dto.status } : {}),
+        },
+        include: {
+          vendor: {
+            select: {
+              id: true,
+              businessName: true,
+              location: true,
+            },
+          },
+          package: {
+            select: {
+              id: true,
+              packageName: true,
+              price: true,
+            },
+          },
+        },
+      });
+
+      return newBooking;
+    });
+  }
   async getBookings(filterDTO) {
     const whereConditions = [];
 

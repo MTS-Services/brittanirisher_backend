@@ -37,7 +37,7 @@ class CoupleExpenseService {
   }
 
   async getAll(coupleProfileId) {
-    return prisma.coupleExpense.findMany({
+    const result = await prisma.coupleExpense.findMany({
       where: { coupleProfileId },
       include: {
         category: {
@@ -49,6 +49,17 @@ class CoupleExpenseService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    const chatData = result.map((expense) => ({
+      id: expense.id,
+      category: expense.category ? expense.category.name : null,
+      price: expense.amount,
+    }));
+
+    return {
+      expenses: result,
+      chatData,
+    };
   }
 
   async getById(id) {

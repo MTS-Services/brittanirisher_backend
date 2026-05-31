@@ -38,6 +38,18 @@ class CoupleProfileController {
     res.sendSuccess(result, 'Couple profile retrieved successfully');
   });
 
+  getCoupleProfileDashboard = asyncHandler(async (req, res) => {
+    const coupleProfileId = req.user.coupleProfileId;
+    if (!coupleProfileId) {
+      return res
+        .status(404)
+        .json({ message: 'Couple profile not found for the user' });
+    }
+    const result =
+      await this.services.getCoupleProfileDashboard(coupleProfileId);
+    res.sendSuccess(result, 'Couple profile retrieved successfully');
+  });
+
   updateCoupleProfile = asyncHandler(async (req, res) => {
     const imageUrl = `/uploads/${req.file.filename}`;
     const coupleProfileId = req.user.coupleProfileId;

@@ -42,6 +42,29 @@ class VendorProfileController {
     );
   });
 
+  getVendorProfileCouple = asyncHandler(async (req, res) => {
+    const filterDTO = new filterVendorDTO(req.query);
+
+    const coupleProfileId = req.user.coupleProfileId;
+
+    if (!coupleProfileId) {
+      return res
+        .status(404)
+        .json({ message: 'Couple profile not found for the user' });
+    }
+
+    const result = await this.vendorProfileService.getVendorProfilesCouple(
+      coupleProfileId,
+      filterDTO,
+    );
+
+    res.sendSuccess(
+      result.data,
+      'Vendor profiles retrieved successfully',
+      result.pagination,
+    );
+  });
+
   getVendorProfilesAdmin = asyncHandler(async (req, res) => {
     const filterDTO = new filterVendorDTO(req.query);
 

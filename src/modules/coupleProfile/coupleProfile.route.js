@@ -26,7 +26,14 @@ router.get(
 );
 
 router.get(
-  '/:id',
+  '/dashboard',
+  authenticate,
+  authorize(['COUPLE']),
+  controller.getCoupleProfileDashboard,
+);
+
+router.get(
+  '/my',
   authenticate,
   authorize(['COUPLE']),
   controller.getCoupleProfileByMe,

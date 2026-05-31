@@ -93,6 +93,8 @@ class PaymentService {
     });
     if (userExists) return;
 
+    const paymentReferenceId = session.payment_intent || session.id;
+
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -157,7 +159,7 @@ class PaymentService {
           subscriptionId: subscription.id,
           amount: (session.amount_total || 0) / 100,
           status: 'SUCCESS',
-          stripeIntentId: session.payment_intent || '',
+          stripeIntentId: paymentReferenceId,
           purchaseDate: new Date(),
         },
       });
@@ -230,7 +232,8 @@ class PaymentService {
     const stripeInvoiceId = session.invoice;
 
     // In subscription mode, payment_intent might be null. Fallback to invoice ID to prevent unique constraint crash.
-    const targetIntentId = session.payment_intent || stripeInvoiceId || '';
+    const targetIntentId =
+      session.payment_intent || stripeInvoiceId || session.id;
 
     // 1. Prevent duplicate processing (Fixes Prisma P2002 Unique Constraint Error)
     if (targetIntentId) {
