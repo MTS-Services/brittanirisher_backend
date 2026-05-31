@@ -74,6 +74,13 @@ router.patch(
   controller.updateVendorProfile,
 );
 
+router.patch(
+  '/status/:id',
+  authenticate,
+  authorize(['ADMIN']),
+  controller.updateVendorStatus,
+);
+
 router.delete(
   '/:id',
   authenticate,

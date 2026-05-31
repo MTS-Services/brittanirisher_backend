@@ -34,4 +34,18 @@ router.get(
   controller.getAdminChart,
 );
 
+router.get(
+  '/admin-payment-card',
+  authenticate,
+  authorize(['ADMIN']),
+  controller.getAdminPaymentCard,
+);
+
+router.get(
+  '/admin-recent-subscriptions',
+  authenticate,
+  authorize(['ADMIN']),
+  controller.getResentSubscriptionPlans,
+);
+
 module.exports = router;

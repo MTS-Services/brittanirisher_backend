@@ -250,6 +250,164 @@ class DashboardService {
 
     return chartData;
   }
+
+  async getAdminPaymentCartData() {
+    const today = new Date();
+
+    // 1. Boundary configurations for "This Month"
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    // 2. Boundary configurations for "This Year"
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const endOfYear = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+
+    // Execute multi-layered calculations concurrently for optimum processing speed
+    const [
+      totalRevenueAggregate,
+      thisMonthRevenueAggregate,
+      thisYearRevenueAggregate,
+      activePlansCount,
+      expiredPlansCount,
+    ] = await Promise.all([
+      // A. TOTAL REVENUE: Sum of all historically successful payments
+      prisma.payment.aggregate({
+        where: { status: 'SUCCESS' },
+        _sum: { amount: true },
+      }),
+
+      // B. THIS MONTH REVENUE: Sum of successful transactions within the current month block
+      prisma.payment.aggregate({
+        where: {
+          status: 'SUCCESS',
+          purchaseDate: {
+            gte: startOfMonth,
+            lte: endOfMonth,
+          },
+        },
+        _sum: { amount: true },
+      }),
+
+      // C. ANNUAL (THIS YEAR) REVENUE: Sum of successful transactions within the current year block
+      prisma.payment.aggregate({
+        where: {
+          status: 'SUCCESS',
+          purchaseDate: {
+            gte: startOfYear,
+            lte: endOfYear,
+          },
+        },
+        _sum: { amount: true },
+      }),
+
+      // D. ACTIVE PLANS: Dynamic count of vendors with an active ongoing plan that hasn't run out
+      prisma.vendorProfile.count({
+        where: {
+          currentSubscription: {
+            status: 'ACTIVE',
+            endsAt: { gte: today },
+          },
+        },
+      }),
+
+      // E. EXPIRED PLANS: Vendor accounts where subscriptions are set to EXPIRED, INACTIVE, or are past their due date
+      prisma.vendorProfile.count({
+        where: {
+          OR: [
+            { currentSubscription: null }, // Registered fallback without active packages
+            {
+              currentSubscription: {
+                OR: [{ status: 'EXPIRED' }, { endsAt: { lt: today } }],
+              },
+            },
+          ],
+        },
+      }),
+    ]);
+
+    return {
+      totalRevenue: totalRevenueAggregate._sum.amount || 0,
+      thisMonthRevenue: thisMonthRevenueAggregate._sum.amount || 0,
+      thisYearRevenue: thisYearRevenueAggregate._sum.amount || 0,
+      activePlansCount,
+      expiredPlansCount,
+    };
+  }
+
+  async getResentSubscriptionPlans(filterDTO) {
+    const { page, limit } = filterDTO;
+
+    const offset = filterDTO.getOffset();
+
+    const [purchases, totalRecords] = await Promise.all([
+      prisma.payment.findMany({
+        where: {
+          status: 'SUCCESS',
+        },
+        include: {
+          vendor: {
+            select: {
+              businessName: true,
+              user: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          subscription: {
+            select: {
+              endsAt: true,
+              plan: {
+                select: {
+                  planName: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          purchaseDate: 'desc',
+        },
+        skip: offset,
+        take: limit,
+      }),
+
+      // Get count of all successful payments to compute total pages
+      prisma.payment.count({ where: { status: 'SUCCESS' } }),
+    ]);
+
+    // 3. Flatten the relational database structure into neat, easily readable objects for the frontend
+    const formattedTableData = purchases.map((item) => ({
+      id: item.id,
+      vendorName: item.vendor?.user?.name || 'Unknown',
+      businessName: item.vendor?.businessName || 'N/A',
+      plan: item.subscription?.plan?.name || 'Custom Plan',
+      price: item.amount,
+      purchaseDate: item.purchaseDate,
+      expiryDate: item.subscription?.endsAt || null,
+    }));
+
+    return {
+      data: formattedTableData,
+      pagination: {
+        currentPage: filterDTO.page,
+        itemsPerPage: filterDTO.limit,
+        totalItems: totalRecords,
+        totalPages: Math.ceil(totalRecords / filterDTO.limit),
+        hasNextPage: filterDTO.page < Math.ceil(totalRecords / filterDTO.limit),
+        hasPreviousPage: filterDTO.page > 1,
+      },
+    };
+  }
 }
 
 module.exports = DashboardService;

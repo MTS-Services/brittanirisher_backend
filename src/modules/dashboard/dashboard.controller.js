@@ -1,4 +1,5 @@
 const { asyncHandler } = require('../../middlewares/errorHandler');
+const { filterPaymentDTO } = require('./dashboard.dto');
 const DashboardService = require('./dashboard.services');
 
 class DashboardController {
@@ -38,6 +39,22 @@ class DashboardController {
     const filter = req.query.filter || 'this_year';
     const result = await this.dashboardService.getAdminChart(filter);
     res.sendSuccess(result, 'Dashboard data retrieved successfully');
+  });
+
+  getAdminPaymentCard = asyncHandler(async (req, res) => {
+    const result = await this.dashboardService.getAdminPaymentCartData();
+    res.sendSuccess(result, 'Dashboard data retrieved successfully');
+  });
+
+  getResentSubscriptionPlans = asyncHandler(async (req, res) => {
+    const filterDTO = new filterPaymentDTO(req.query);
+    const result =
+      await this.dashboardService.getResentSubscriptionPlans(filterDTO);
+    res.sendSuccess(
+      result.data,
+      'Dashboard data retrieved successfully',
+      result.pagination,
+    );
   });
 }
 

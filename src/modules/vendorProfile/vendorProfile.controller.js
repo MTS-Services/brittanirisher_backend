@@ -101,6 +101,21 @@ class VendorProfileController {
     );
   });
 
+  updateVendorStatus = asyncHandler(async (req, res) => {
+    const { status } = req.body;
+    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        message: `Invalid status. Valid statuses are: ${validStatuses.join(', ')}`,
+      });
+    }
+    const result = await this.vendorProfileService.updateVendorStatus(
+      req.params.id,
+      status,
+    );
+    res.sendSuccess(result, 'Vendor profile status updated successfully');
+  });
+
   updateSubscriptionPlanChange = asyncHandler(async (req, res) => {
     const { planId } = req.body;
     const vendorId = req.user.vendorProfileId;

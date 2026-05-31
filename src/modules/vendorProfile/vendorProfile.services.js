@@ -725,6 +725,15 @@ class VendorProfileService {
     });
   }
 
+  async updateVendorStatus(id, newStatus) {
+    await this.getVendorProfileById(id);
+
+    return prisma.vendorProfile.update({
+      where: { id },
+      data: { status: newStatus },
+    });
+  }
+
   async deleteVendorProfile(id) {
     await this.getVendorProfileById(id);
 
