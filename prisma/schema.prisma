@@ -56,6 +56,7 @@ model User {
   id            String        @id @default(cuid())
   name          String
   email         String        @unique
+  phone         String?
   passwordHash  String
   role          Role          @default(COUPLE)
   status        AccountStatus @default(PENDING_VERIFICATION)
@@ -332,21 +333,33 @@ model VendorPortfolio {
   @@map("vendor_portfolios")
 }
 
-// Vendor Calendar / Booking Availability
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  BOOKED
+}
+
 model VendorAvailability {
-  id          String             @id @default(uuid())
-  vendorId    String
-  vendor      VendorProfile      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  blockedDate DateTime           @db.Date
+  id       String        @id @default(uuid())
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  blockedDate DateTime
   status      AvailabilityStatus @default(BOOKED)
 
+  note String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([vendorId, blockedDate])
   @@map("vendor_availabilities")
 }
 
-enum AvailabilityStatus {
-  BOOKED
-  UNAVAILABLE
-}
+// enum AvailabilityStatus {
+//   BOOKED
+//   UNAVAILABLE
+// }
 
 // Leads Management
 model Enquiry {
@@ -443,6 +456,7 @@ model VendorPackage {
 }
 
 enum BookingStatus {
+  PENDING
   BOOKED
   COMPLETED
   CANCELED

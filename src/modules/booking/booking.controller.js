@@ -52,6 +52,15 @@ class BookingController {
     );
   });
 
+  getBookingCard = asyncHandler(async (req, res) => {
+    const vendorId = req.user.vendorProfileId;
+    if (!vendorId) {
+      throw new AppError('Vendor profile not found for current user', 403);
+    }
+    const result = await this.bookingService.getVendorDashboardStats(vendorId);
+    res.sendSuccess(result, 'Bookings card retrieved successfully');
+  });
+
   getBookingById = asyncHandler(async (req, res) => {
     const result = await this.bookingService.getBookingById(req.params.id);
     this.ensureVendorAccess(req, result);

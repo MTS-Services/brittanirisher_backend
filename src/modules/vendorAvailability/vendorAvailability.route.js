@@ -13,6 +13,7 @@ const {
   vendorAvailabilityFilterQuerySchema,
   availabilityCalendarQuerySchema,
   setMonthlyAvailabilitySchema,
+  bulkUpdateSchema,
 } = require('./vendorAvailability.validator');
 
 
@@ -37,7 +38,7 @@ router.post(
   '/bulk/month',
   authenticate,
   authorize(['VENDOR']),
-  validate(setMonthlyAvailabilitySchema),
+  validate(bulkUpdateSchema),
   controller.setMonthlyAvailability,
 );
 

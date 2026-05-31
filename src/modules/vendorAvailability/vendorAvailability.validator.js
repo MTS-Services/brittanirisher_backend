@@ -36,6 +36,28 @@ const availabilityCalendarQuerySchema = Joi.object({
   month: Joi.number().integer().min(1).max(12).required(),
 });
 
+const bulkUpdateSchema = Joi.array()
+  .items(
+    Joi.object({
+      date: Joi.date().iso().required().messages({
+        'date.base': 'Invalid date format. Use YYYY-MM-DD',
+        'any.required': 'Date is required for each availability item',
+      }),
+      status: Joi.string()
+        .valid('AVAILABLE', 'UNAVAILABLE', 'BOOKED')
+        .required()
+        .messages({
+          'any.only': 'Status must be either AVAILABLE, UNAVAILABLE, or BOOKED',
+          'any.required': 'Status is required',
+        }),
+      note: Joi.string().allow('', null).max(500),
+    }),
+  )
+  .min(1)
+  .messages({
+    'array.min': 'You must provide at least one availability slot to update',
+  });
+
 const setMonthlyAvailabilitySchema = Joi.object({
   vendorId: optionalId,
   year: Joi.number().integer().min(2000).max(2100).required(),
@@ -57,4 +79,5 @@ module.exports = {
   vendorAvailabilityFilterQuerySchema,
   availabilityCalendarQuerySchema,
   setMonthlyAvailabilitySchema,
+  bulkUpdateSchema,
 };

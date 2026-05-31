@@ -216,6 +216,66 @@ class BookingService {
     });
   }
 
+  async getVendorDashboardStats(vendorId) {
+    const today = new Date();
+
+    const [totalBookings, awaitingRequests, upcomingBookings] =
+      await Promise.all([
+        prisma.vendorBooking.count({
+          where: {
+            vendorId: vendorId,
+            status: { not: 'CANCELED' },
+          },
+        }),
+
+        prisma.vendorBooking.count({
+          where: {
+            vendorId: vendorId,
+            status: 'PENDING',
+          },
+        }),
+
+        prisma.vendorBooking.findMany({
+          where: {
+            vendorId: vendorId,
+            status: 'BOOKED',
+            weddingDate: {
+              gte: today,
+            },
+          },
+          orderBy: {
+            weddingDate: 'asc',
+          },
+          select: {
+            weddingDate: true,
+          },
+        }),
+      ]);
+
+    let nextEventContext = 'No upcoming events';
+    if (upcomingBookings.length > 0) {
+      const nextEventDate = upcomingBookings[0].weddingDate;
+
+      const timeDifference = nextEventDate.getTime() - today.getTime();
+      const daysRemaining = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
+
+      if (daysRemaining === 0) {
+        nextEventContext = 'Next event is today!';
+      } else if (daysRemaining === 1) {
+        nextEventContext = 'Next event is tomorrow';
+      } else {
+        nextEventContext = `Next event in ${daysRemaining} days`;
+      }
+    }
+
+    return {
+      totalBookings,
+      upcomingEvents: upcomingBookings.length,
+      nextEventContext,
+      awaitingRequests,
+    };
+  }
+
   async deleteBooking(id) {
     await this.getBookingById(id);
 

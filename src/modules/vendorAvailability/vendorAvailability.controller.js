@@ -1,4 +1,4 @@
-const { asyncHandler } = require('../../middlewares/errorHandler');
+const { asyncHandler, AppError } = require('../../middlewares/errorHandler');
 const {
   CreateVendorAvailabilityDTO,
   FilterVendorAvailabilityDTO,
@@ -40,16 +40,18 @@ class VendorAvailabilityController {
   });
 
   setMonthlyAvailability = asyncHandler(async (req, res) => {
-    const dto = new SetMonthlyAvailabilityDTO(req.body);
+    const dto = req.body;
     const vendorId = req.user?.vendorProfileId;
 
     if (!vendorId) {
       throw new AppError('Vendor profile not found for current user', 403);
     }
 
-    dto.vendorId = vendorId;
-    const result =
-      await this.vendorAvailabilityService.setMonthlyAvailability(dto);
+    // dto.vendorId = vendorId;
+    const result = await this.vendorAvailabilityService.updateBulkAvailability(
+      vendorId,
+      dto,
+    );
     res.sendSuccess(result, 'Monthly availability saved successfully');
   });
 
@@ -109,7 +111,7 @@ class VendorAvailabilityController {
     const existing = await this.vendorAvailabilityService.getAvailabilityById(
       req.params.id,
     );
-    this.ensureVendorAccess(req, existing);
+    // this.ensureVendorAccess(req, existing);
 
     await this.vendorAvailabilityService.deleteAvailability(req.params.id);
     res.sendSuccess(null, 'Vendor availability deleted successfully');

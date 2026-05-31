@@ -33,6 +33,13 @@ router.get(
 );
 
 router.get(
+  '/card',
+  authenticate,
+  authorize(['VENDOR']),
+  controller.getBookingCard,
+);
+
+router.get(
   '/:id',
   authenticate,
   authorize(['ADMIN', 'VENDOR']),

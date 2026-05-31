@@ -50,6 +50,31 @@ class VendorAvailabilityService {
     });
   }
 
+  async updateBulkAvailability(vendorId, datesArray) {
+    await this.ensureVendorExists(vendorId);
+    return await prisma.$transaction(
+      datesArray.map((item) => {
+        const targetDate = new Date(item.date);
+        return prisma.vendorAvailability.upsert({
+          where: {
+            vendorId_blockedDate: {
+              vendorId: vendorId,
+              blockedDate: targetDate,
+            },
+          },
+          update: {
+            status: item.status,
+          },
+          create: {
+            vendorId: vendorId,
+            blockedDate: targetDate,
+            status: item.status,
+          },
+        });
+      }),
+    );
+  }
+
   async setMonthlyAvailability(dto) {
     await this.ensureVendorExists(dto.vendorId);
 
@@ -93,12 +118,12 @@ class VendorAvailabilityService {
   }
 
   async getCalendarByVendorAndMonth(vendorId, year, month) {
-    await this.ensureVendorExists(vendorId);
+    // await this.ensureVendorExists(vendorId);
     const { startDate, endDate } = this.getMonthRange(year, month);
 
     const days = await prisma.vendorAvailability.findMany({
       where: {
-        vendorId,
+        // vendorId,
         blockedDate: {
           gte: startDate,
           lt: endDate,

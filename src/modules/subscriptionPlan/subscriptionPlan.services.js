@@ -18,7 +18,7 @@ class SubscriptionPlanService {
   async getSubscriptionPlans() {
     return prisma.subscriptionPlan.findMany({
       where: { isDeleted: false },
-      orderBy: { planName: 'asc' },
+      orderBy: { createdAt: 'asc' },
     });
   }
 
