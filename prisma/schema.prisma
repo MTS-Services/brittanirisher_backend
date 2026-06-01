@@ -148,29 +148,29 @@ model SubscriptionPlan {
 // -----------------------------------------------------------------
 
 model CoupleProfile {
-  id                  String               @id @default(uuid())
-  userId              String               @unique
-  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name                String
-  eventDate           DateTime?
-  budget              Decimal              @db.Decimal(10, 2)
-  expendBudget        Decimal              @default(0) @db.Decimal(10, 2)
-  remainingBudget     Decimal              @default(0) @db.Decimal(10, 2)
-  weldingStyleId      String?
-  weldingStyle        WeddingStyle?        @relation(fields: [weldingStyleId], references: [id])
-  weldingDate         DateTime?
-  estimatedGuests     Int?
-  location            String?
-  phone               String?
-  profileImage        String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  coupleExpenses      CoupleExpense[]
-  coupleTimelineTasks CoupleTimelineTask[]
-  weddingDaySchedules WeddingDaySchedule[]
-  enquiries           Enquiry[]
-  taskSections        TaskSection[]
-  savedVendors        SavedVendor[]
+  id                     String                  @id @default(uuid())
+  userId                 String                  @unique
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                   String
+  eventDate              DateTime?
+  budget                 Decimal                 @db.Decimal(10, 2)
+  expendBudget           Decimal                 @default(0) @db.Decimal(10, 2)
+  remainingBudget        Decimal                 @default(0) @db.Decimal(10, 2)
+  weldingStyleId         String?
+  weldingStyle           WeddingStyle?           @relation(fields: [weldingStyleId], references: [id])
+  weldingDate            DateTime?
+  estimatedGuests        Int?
+  location               String?
+  phone                  String?
+  profileImage           String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  coupleExpenses         CoupleExpense[]
+  weddingDaySchedules    WeddingDaySchedule[]
+  enquiries              Enquiry[]
+  taskSections           TaskSection[]
+  savedVendors           SavedVendor[]
+  coupleTimelineSections CoupleTimelineSection[]
 
   @@map("couple_profiles")
 }
@@ -230,10 +230,25 @@ model CoupleTask {
   @@map("couple_tasks")
 }
 
-model CoupleTimelineTask {
-  id              String        @id @default(uuid())
+model CoupleTimelineSection {
+  id       String @id @default(uuid())
+  category String
+  order    Int
+
+  // Relations
   coupleProfileId String
-  coupleProfile   CoupleProfile @relation(fields: [coupleProfileId], references: [id], onDelete: Cascade)
+  coupleProfile   CoupleProfile        @relation(fields: [coupleProfileId], references: [id], onDelete: Cascade)
+  tasks           CoupleTimelineTask[]
+  note            String?              @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([coupleProfileId, category])
+}
+
+model CoupleTimelineTask {
+  id String @id @default(uuid())
 
   phaseTitle String?
   taskName   String
@@ -244,8 +259,10 @@ model CoupleTimelineTask {
   isCompleted Boolean @default(false)
   isCustom    Boolean @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  coupleTimelineSection   CoupleTimelineSection @relation(fields: [coupleTimelineSectionId], references: [id])
+  coupleTimelineSectionId String
 
   @@map("couple_timeline_tasks")
 }
