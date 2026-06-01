@@ -94,30 +94,46 @@ class VendorProfileController {
 
   updateVendorProfile = asyncHandler(async (req, res) => {
     const dto = new UpdateVendorProfileDTO(req.body);
-
     const vendorId = req.user.vendorProfileId;
 
     if (!vendorId) {
       return res.sendBadRequest('You do not have a vendor profile to update');
     }
 
-    const hasBodyFields = Object.keys(req.body || {}).length > 0;
-    const hasImages = Array.isArray(req.files) && req.files.length > 0;
+    let profileImageUrl = null;
+    if (
+      req.files &&
+      req.files['profileImage'] &&
+      req.files['profileImage'].length > 0
+    ) {
+      const file = req.files['profileImage'][0];
+      profileImageUrl = `/uploads/${file.filename}`;
+    }
 
-    if (!hasBodyFields && !hasImages) {
+    let portfolioImageUrls = [];
+    if (req.files && req.files['images'] && req.files['images'].length > 0) {
+      portfolioImageUrls = req.files['images'].map(
+        (file) => `/uploads/${file.filename}`,
+      );
+    }
+
+    const hasBodyFields = Object.keys(req.body || {}).length > 0;
+    const hasProfileImage = !!profileImageUrl;
+    const hasPortfolioImages = portfolioImageUrls.length > 0;
+
+    if (!hasBodyFields && !hasProfileImage && !hasPortfolioImages) {
       return res.sendBadRequest(
         'Provide at least one profile field or upload at least one image',
       );
     }
 
-    const imageUrls = hasImages
-      ? req.files.map((file) => `/uploads/${file.filename}`)
-      : [];
     const result = await this.vendorProfileService.updateVendorProfile(
       vendorId,
-      imageUrls,
+      profileImageUrl,
+      portfolioImageUrls,
       dto,
     );
+
     res.sendSuccess(
       new VendorProfileResponseDTO(result),
       'Vendor profile updated successfully',

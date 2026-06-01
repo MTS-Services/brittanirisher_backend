@@ -6,7 +6,7 @@ const coupleTimelineTaskCreateSchema = Joi.object({
   priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH').default('MEDIUM'),
   taskNotes: Joi.string().trim().allow(null, ''),
   isCompleted: Joi.boolean().default(false),
-  category: Joi.string().uuid().required(),
+  category: Joi.string().required(),
   order: Joi.number().integer().optional(),
 });
 

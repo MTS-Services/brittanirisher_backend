@@ -36,6 +36,8 @@ const updateVendorProfileSchema = Joi.object({
   speciality: Joi.string().trim().max(150).optional(),
   highlightedServices: Joi.array().items(Joi.string().trim()).optional(),
   aboutMe: Joi.string().trim().max(2000).optional(),
+  profileImage: Joi.any().optional(),
+  images: Joi.any().optional(),
 });
 
 const vendorProfileIdParamSchema = Joi.object({

@@ -65,6 +65,7 @@ model User {
   emailVerified Boolean       @default(false)
   joinedAt      DateTime      @default(now())
   lastLoginAt   DateTime?
+  avatarUrl     String?
 
   // Relations
   otpTokens     OtpToken[]

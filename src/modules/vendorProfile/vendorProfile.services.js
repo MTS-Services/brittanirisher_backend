@@ -314,12 +314,13 @@ class VendorProfileService {
       availableDate,
       minPrice,
       maxPrice,
-      status,
+      status = 'APPROVED',
     } = filterDTO;
 
     const offset = filterDTO.getOffset();
     const whereCondition = [];
 
+    // 1. Filter: Text search (Matches Business Name or Speciality)
     if (search) {
       whereCondition.push({
         OR: [
@@ -329,20 +330,24 @@ class VendorProfileService {
       });
     }
 
+    // 2. Filter: Location strict search
     if (locationSearch) {
       whereCondition.push({
         OR: [{ location: { contains: locationSearch, mode: 'insensitive' } }],
       });
     }
 
+    // 3. Filter: Service Category
     if (category) {
       whereCondition.push({ category: { slug: category } });
     }
 
+    // 4. Filter: Status validation
     if (status) {
       whereCondition.push({ status: status });
     }
 
+    // 5. Filter: Date Availability Check
     if (availableDate) {
       const date = new Date(availableDate);
       date.setHours(0, 0, 0, 0);
@@ -366,6 +371,7 @@ class VendorProfileService {
       });
     }
 
+    // 6. Filter: Price Range Constraints
     if (minPrice !== undefined || maxPrice !== undefined) {
       const priceFilter = {};
       if (minPrice !== undefined && !Number.isNaN(minPrice)) {
@@ -386,11 +392,18 @@ class VendorProfileService {
 
     const finalWhere = whereCondition.length > 0 ? { AND: whereCondition } : {};
 
+    // 7. DB Query with Premium Subscription Priority Booster
     const [profiles, total] = await Promise.all([
       prisma.vendorProfile.findMany({
         where: finalWhere,
         include: {
           category: true,
+          // Included to dynamically fetch active subscription tier pricing
+          currentSubscription: {
+            include: {
+              plan: true,
+            },
+          },
           portfolioImages: {
             orderBy: { sortOrder: 'asc' },
             take: 1,
@@ -410,15 +423,27 @@ class VendorProfileService {
             },
           },
         },
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
+        orderBy: [
+          // CRITICAL: Sort by monthly subscription price descending to show top-tier premium plans first
+          {
+            currentSubscription: {
+              plan: {
+                priceMonthly: 'desc',
+              },
+            },
+          },
+          // Fallback user-defined sorting (e.g., createdAt, rating)
+          {
+            [sortBy || 'createdAt']: sortOrder || 'desc',
+          },
+        ],
         skip: offset,
         take: limit,
       }),
       prisma.vendorProfile.count({ where: finalWhere }),
     ]);
 
+    // 8. Map Data Outputs cleanly without percentage calculations
     const normalizedProfiles = profiles.map((profile) => {
       const packagePrices = (profile.packages || []).map((pkg) =>
         Number(pkg.price),
@@ -430,61 +455,24 @@ class VendorProfileService {
         ? Math.max(...packagePrices)
         : null;
 
-      const criteria = [];
-
-      if (search) {
-        const q = search.toLowerCase();
-        criteria.push(
-          profile.businessName?.toLowerCase().includes(q) ||
-            profile.speciality?.toLowerCase().includes(q),
-        );
-      }
-
-      if (locationSearch) {
-        criteria.push(
-          profile.location
-            ?.toLowerCase()
-            .includes(locationSearch.toLowerCase()),
-        );
-      }
-
-      if (category) {
-        criteria.push(profile.category?.slug === category);
-      }
-
-      if (availableDate) {
-        criteria.push(true);
-      }
-
-      if (minPrice !== undefined || maxPrice !== undefined) {
-        const minVal =
-          minPrice !== undefined ? minPrice : Number.NEGATIVE_INFINITY;
-        const maxVal =
-          maxPrice !== undefined ? maxPrice : Number.POSITIVE_INFINITY;
-        const intersects =
-          lowestPackagePrice !== null &&
-          highestPackagePrice !== null &&
-          highestPackagePrice >= minVal &&
-          lowestPackagePrice <= maxVal;
-        criteria.push(intersects);
-      }
-
-      const matchPercentage =
-        criteria.length === 0
-          ? 100
-          : Math.round(
-              (criteria.filter(Boolean).length / criteria.length) * 100,
-            );
-
       return {
-        ...profile,
-        matchPercentage,
+        id: profile.id,
+        name: profile.user?.name || null,
+        businessName: profile.businessName,
+        email: profile.user?.email || null,
+        phone: profile.phone || null,
+        location: profile.location || null,
+        category: profile.category?.name || null,
+        speciality: profile.speciality || null,
+        aboutMe: profile.aboutMe || null,
         thumbnailImage:
           profile.coverImage || profile.portfolioImages?.[0]?.mediaUrl || null,
         packagePriceRange: {
           low: lowestPackagePrice,
           high: highestPackagePrice,
         },
+        // subscriptionTierPrice:
+        //   profile.currentSubscription?.plan?.priceMonthly || 0,
       };
     });
 
@@ -547,7 +535,7 @@ class VendorProfileService {
       });
     }
 
-    // 3. Filter: Strict Location 
+    // 3. Filter: Strict Location
     if (locationSearch) {
       whereCondition.push({
         location: { contains: locationSearch, mode: 'insensitive' },
@@ -716,7 +704,7 @@ class VendorProfileService {
           low: lowestPackagePrice,
           high: highestPackagePrice,
         },
-        subscriptionTierPrice: profile.currentSubscription?.plan?.price || 0,
+        // subscriptionTierPrice: profile.currentSubscription?.plan?.price || 0,
       };
     });
 
@@ -912,10 +900,16 @@ class VendorProfileService {
             email: true,
             role: true,
             status: true,
+            avatarUrl: true,
           },
         },
         portfolioImages: {
           orderBy: { sortOrder: 'asc' },
+        },
+        currentSubscription: {
+          include: {
+            plan: true,
+          },
         },
         packages: true,
       },
@@ -925,10 +919,26 @@ class VendorProfileService {
       throw new AppError('Vendor profile not found', 404);
     }
 
-    return profile;
+    const modifiedProfile = {
+      name: profile.user?.name || null,
+      email: profile.user?.email || null,
+      phone: profile.phone || null,
+      businessName: profile.businessName || null,
+      location: profile.location || null,
+      category: profile.category?.name || null,
+      highlightedServices: profile.highlightedServices || null,
+      speciality: profile.speciality || null,
+      aboutMe: profile.aboutMe || null,
+      profileImage: profile.user.avatarUrl || null,
+      portfolioImages: profile.portfolioImages || [],
+      packages: profile.packages || [],
+      subscriptionPlan: profile.currentSubscription || null,
+    };
+
+    return modifiedProfile;
   }
 
-  async updateVendorProfile(id, imageUrls, data) {
+  async updateVendorProfile(id, profileImageUrl, imageUrls, data) {
     const existingProfile = await this.getVendorProfileById(id);
     const dtoData = {
       ...data.toDatabase(),
@@ -942,6 +952,10 @@ class VendorProfileService {
     if (dtoData.email !== undefined) {
       userData.email = dtoData.email?.toLowerCase();
       delete dtoData.email;
+    }
+
+    if (profileImageUrl) {
+      userData.avatarUrl = profileImageUrl;
     }
 
     return prisma.$transaction(async (tx) => {

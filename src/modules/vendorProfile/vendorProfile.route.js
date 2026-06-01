@@ -76,7 +76,10 @@ router.patch(
   '/update',
   authenticate,
   authorize(['VENDOR', 'ADMIN']),
-  upload.array('images', 10),
+  upload.fields([
+    { name: 'profileImage', maxCount: 1 },
+    { name: 'images', maxCount: 20 },
+  ]),
   packageParseMiddleware(),
   validate(updateVendorProfileSchema),
   controller.updateVendorProfile,
