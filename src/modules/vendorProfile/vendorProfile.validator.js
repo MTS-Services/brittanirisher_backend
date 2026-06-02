@@ -24,6 +24,8 @@ const createVendorProfileSchema = Joi.object({
     .required(),
   packageId: Joi.string().trim().optional(),
   categoryId: Joi.string().trim().required(),
+  cityId: Joi.string().trim().required(),
+  stateId: Joi.string().trim().required(),
 });
 
 const updateVendorProfileSchema = Joi.object({
@@ -38,6 +40,8 @@ const updateVendorProfileSchema = Joi.object({
   aboutMe: Joi.string().trim().max(2000).optional(),
   profileImage: Joi.any().optional(),
   images: Joi.any().optional(),
+  cityId: Joi.string().trim().optional(),
+  stateId: Joi.string().trim().optional(),
 });
 
 const vendorProfileIdParamSchema = Joi.object({
@@ -54,6 +58,8 @@ const vendorFilterQuerySchema = Joi.object({
   search: Joi.string().trim().optional(),
   locationSearch: Joi.string().trim().optional(),
   category: Joi.string().trim().optional(),
+  city: Joi.string().trim().optional(),
+  state: Joi.string().trim().optional(),
   availableDate: Joi.date().iso().optional(),
   minPrice: Joi.number().min(0).optional(),
   maxPrice: Joi.number().min(0).optional(),

@@ -36,6 +36,8 @@ class CreateVendorProfileDTO {
     this.coverImage = data.coverImage || null;
     this.highlightedServices = data.highlightedServices || [];
     this.categoryId = data.categoryId;
+    this.cityId = data.cityId;
+    this.stateId = data.stateId;
     this.packageId = data.packageId || null;
 
     this.packages = Array.isArray(data.package)
@@ -74,6 +76,8 @@ class filterVendorDTO {
     this.category = query.category;
     this.availableDate = query.availableDate;
     this.status = query.status;
+    this.city = query.city;
+    this.state = query.state;
     this.minPrice =
       query.minPrice !== undefined ? Number(query.minPrice) : undefined;
     this.maxPrice =
@@ -115,6 +119,12 @@ class UpdateVendorProfileDTO {
 
     if (data.aboutMe !== undefined)
       this.aboutMe = data.aboutMe ? data.aboutMe.trim() : null;
+
+    if (data.cityId !== undefined)
+      this.cityId = data.cityId ? data.cityId.trim() : null;
+
+    if (data.stateId !== undefined)
+      this.stateId = data.stateId ? data.stateId.trim() : null;
   }
 
   toDatabase() {

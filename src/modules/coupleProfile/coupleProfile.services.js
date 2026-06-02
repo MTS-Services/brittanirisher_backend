@@ -15,6 +15,8 @@ class CoupleProfileService {
       weldingDate,
       budget,
       eventDate,
+      cityId,
+      stateId,
     } = profileData;
 
     const isEmailTaken = await prisma.user.findUnique({
@@ -57,6 +59,8 @@ class CoupleProfileService {
           weldingDate,
           budget,
           eventDate,
+          cityId,
+          stateId,
         },
       });
 
@@ -106,6 +110,10 @@ class CoupleProfileService {
     const [coupleProfiles, total] = await prisma.$transaction([
       prisma.coupleProfile.findMany({
         where: finalWhere,
+        include: {
+          city: true,
+          state: true,
+        },
         orderBy: { [sortBy]: sortOrder },
         skip: offset,
         take: limit,
@@ -115,6 +123,8 @@ class CoupleProfileService {
 
     const updateData = coupleProfiles.map((profile) => ({
       ...profile,
+      city: profile.city ? profile.city.name : null,
+      state: profile.state ? profile.state.name : null,
       budget: Number(profile.budget),
       expendBudget: Number(profile.expendBudget),
       remainingBudget: profile.budget - profile.expendBudget,
@@ -135,6 +145,10 @@ class CoupleProfileService {
 
   async getCoupleProfileById(id) {
     const coupleProfile = await prisma.coupleProfile.findUnique({
+      include: {
+        city: true,
+        state: true,
+      },
       where: { id },
     });
 
@@ -143,6 +157,8 @@ class CoupleProfileService {
     }
     return {
       ...coupleProfile,
+      city: coupleProfile.city ? coupleProfile.city.name : null,
+      state: coupleProfile.state ? coupleProfile.state.name : null,
       budget: Number(coupleProfile.budget),
       expendBudget: Number(coupleProfile.expendBudget),
       remainingBudget: coupleProfile.budget - coupleProfile.expendBudget,

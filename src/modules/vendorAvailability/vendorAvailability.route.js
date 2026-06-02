@@ -16,7 +16,6 @@ const {
   bulkUpdateSchema,
 } = require('./vendorAvailability.validator');
 
-
 const router = express.Router();
 const controller = new VendorAvailabilityController();
 

@@ -144,6 +144,33 @@ model SubscriptionPlan {
   @@map("subscription_plans")
 }
 
+model State {
+  id     String @id @default(cuid())
+  name   String @unique
+  slug   String @unique
+  cities City[]
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  coupleProfiles CoupleProfile[]
+  vendorProfiles VendorProfile[]
+}
+
+model City {
+  id      String @id @default(cuid())
+  name    String
+  slug    String
+  stateId String
+  state   State  @relation(fields: [stateId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  coupleProfiles CoupleProfile[]
+  vendorProfiles VendorProfile[]
+
+  @@unique([name, stateId])
+}
+
 // -----------------------------------------------------------------
 // Couple Profile
 // -----------------------------------------------------------------
@@ -162,6 +189,10 @@ model CoupleProfile {
   weldingDate            DateTime?
   estimatedGuests        Int?
   location               String?
+  cityId                 String?
+  city                   City?                   @relation(fields: [cityId], references: [id])
+  stateId                String?
+  state                  State?                  @relation(fields: [stateId], references: [id])
   phone                  String?
   profileImage           String?
   createdAt              DateTime                @default(now())
@@ -335,6 +366,10 @@ model VendorProfile {
   vendorBookings VendorBooking[]
   savedVendors   SavedVendor[]
   payments       Payment[]
+  state          State?          @relation(fields: [stateId], references: [id])
+  stateId        String?
+  city           City?           @relation(fields: [cityId], references: [id])
+  cityId         String?
 
   @@map("vendor_profiles")
 }

@@ -24,6 +24,8 @@ const saveVendorRoutes = require('../modules/saveVendor/saveVendor.route');
 const paymentRoutes = require('../modules/payment/payment.route');
 const DashboardRoutes = require('../modules/dashboard/dashboard.route');
 const timelineRoutes = require('../modules/coupleTimeline/coupleTimeline.route');
+const statesRoutes = require('../modules/states/states.route');
+const cityRoutes = require('../modules/city/city.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -66,4 +68,6 @@ router.use('/save-vendor', saveVendorRoutes);
 // router.use('/payment', paymentRoutes);
 router.use('/dashboard', DashboardRoutes);
 router.use('/couple-timeline', timelineRoutes);
+router.use('/state', statesRoutes);
+router.use('/city', cityRoutes);
 module.exports = router;

@@ -41,8 +41,8 @@ router.get(
 
 router.get(
   '/:id',
-  authenticate,
-  authorize(['COUPLE']),
+  // authenticate,
+  // authorize(['COUPLE']),
   controller.getCoupleProfileById,
 );
 

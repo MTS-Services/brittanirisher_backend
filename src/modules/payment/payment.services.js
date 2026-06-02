@@ -22,6 +22,8 @@ class PaymentService {
       packageId,
       categoryId,
       phone,
+      cityId,
+      stateId,
     } = vendorData;
 
     const session = await stripe.checkout.sessions.create({
@@ -66,6 +68,8 @@ class PaymentService {
         imageUrls: JSON.stringify(imageUrls || []),
         packages: JSON.stringify(packages || []),
         packageId: packageId,
+        cityId: cityId,
+        stateId: stateId,
       },
       success_url: `${process.env.FRONTEND_URL}/registration-success?success=true`,
       cancel_url: `${process.env.FRONTEND_URL}/pricing?canceled=true`,
@@ -120,6 +124,8 @@ class PaymentService {
           phone: meta.phone,
           stripeCustomerId: session.customer,
           highlightedServices,
+          cityId: meta.cityId,
+          stateId: meta.stateId,
           portfolioImages: {
             create: imageUrls.map((url, index) => ({
               mediaUrl: url,

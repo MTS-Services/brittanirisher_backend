@@ -172,6 +172,8 @@ class VendorProfileService {
       packages,
       packageId,
       categoryId,
+      cityId,
+      stateId,
     } = data;
 
     console.log('Creating vendor profile with data:', data);
@@ -242,6 +244,8 @@ class VendorProfileService {
           speciality,
           aboutMe,
           categoryId,
+          cityId,
+          stateId,
           phone: data.phone,
           highlightedServices,
           portfolioImages: {
@@ -313,6 +317,8 @@ class VendorProfileService {
       category,
       availableDate,
       minPrice,
+      city,
+      state,
       maxPrice,
       status = 'APPROVED',
     } = filterDTO;
@@ -340,6 +346,14 @@ class VendorProfileService {
     // 3. Filter: Service Category
     if (category) {
       whereCondition.push({ category: { slug: category } });
+    }
+
+    if (city) {
+      whereCondition.push({ city: { slug: city } });
+    }
+
+    if (state) {
+      whereCondition.push({ state: { slug: state } });
     }
 
     // 4. Filter: Status validation
@@ -404,6 +418,8 @@ class VendorProfileService {
               plan: true,
             },
           },
+          city: true,
+          state: true,
           portfolioImages: {
             orderBy: { sortOrder: 'asc' },
             take: 1,
@@ -462,6 +478,8 @@ class VendorProfileService {
         email: profile.user?.email || null,
         phone: profile.phone || null,
         location: profile.location || null,
+        city: profile.city?.name || null,
+        state: profile.state?.name || null,
         category: profile.category?.name || null,
         speciality: profile.speciality || null,
         aboutMe: profile.aboutMe || null,
@@ -490,11 +508,15 @@ class VendorProfileService {
   }
 
   async getVendorProfilesCouple(coupleId, filterDTO) {
-    const { sortBy, sortOrder, search, limit, category, status } = filterDTO;
+    const { sortBy, sortOrder, search, limit, category, status, city, state } =
+      filterDTO;
     let { locationSearch, availableDate, minPrice, maxPrice } = filterDTO;
     const offset = filterDTO.getOffset();
 
+    // Variables to hold the target city and state for percentage scoring
     let targetLocationForMatching = locationSearch || null;
+    let targetCitySlugForMatching = city || null;
+    let targetStateSlugForMatching = state || null;
 
     // 1. Fetch default preferences from CoupleProfile
     if (coupleId) {
@@ -502,6 +524,12 @@ class VendorProfileService {
         where: { id: coupleId },
         select: {
           location: true,
+          city: {
+            select: { name: true, slug: true },
+          },
+          state: {
+            select: { name: true, slug: true },
+          },
           weldingDate: true,
           budget: true,
         },
@@ -511,8 +539,15 @@ class VendorProfileService {
         throw new AppError('Couple profile not found', 404);
       }
 
+      // Fallback logic: Use couple's profile data if NOT explicitly filtered by client
       if (!targetLocationForMatching && couple.location) {
         targetLocationForMatching = couple.location;
+      }
+      if (!targetCitySlugForMatching && couple.city?.slug) {
+        targetCitySlugForMatching = couple.city.slug;
+      }
+      if (!targetStateSlugForMatching && couple.state?.slug) {
+        targetStateSlugForMatching = couple.state.slug;
       }
 
       if (!availableDate && couple.weldingDate) {
@@ -545,6 +580,16 @@ class VendorProfileService {
     // 4. Filter: Category
     if (category) {
       whereCondition.push({ category: { slug: category } });
+    }
+
+    // Filter: City
+    if (city) {
+      whereCondition.push({ city: { slug: city } });
+    }
+
+    // Filter: State
+    if (state) {
+      whereCondition.push({ state: { slug: state } });
     }
 
     // 5. Filter: Status
@@ -598,6 +643,8 @@ class VendorProfileService {
         where: finalWhere,
         include: {
           category: true,
+          city: true, // 🎯 CRITICAL: Included to check profile.city.slug for score
+          state: true, // 🎯 CRITICAL: Included to check profile.state.slug for score
           currentSubscription: {
             include: { plan: true },
           },
@@ -611,6 +658,12 @@ class VendorProfileService {
           user: {
             select: { id: true, name: true, email: true },
           },
+          savedVendors: coupleId
+            ? {
+                where: { coupleProfileId: coupleId },
+                select: { id: true },
+              }
+            : false,
         },
         orderBy: [
           {
@@ -628,6 +681,7 @@ class VendorProfileService {
       prisma.vendorProfile.count({ where: finalWhere }),
     ]);
 
+    // 9. Normalize Result Payloads & Compute Dynamic Match Ratios
     const normalizedProfiles = profiles.map((profile) => {
       const packagePrices = (profile.packages || []).map((pkg) =>
         Number(pkg.price),
@@ -641,6 +695,7 @@ class VendorProfileService {
 
       const weights = [];
 
+      // Criteria 1: Text Search
       if (search) {
         const q = search.toLowerCase();
         const hasMatch =
@@ -649,6 +704,7 @@ class VendorProfileService {
         weights.push(hasMatch ? 1 : 0);
       }
 
+      // Criteria 2: Location String Match Score
       if (targetLocationForMatching) {
         const locationScore = calculateLocationMatchScore(
           profile.location,
@@ -657,14 +713,29 @@ class VendorProfileService {
         weights.push(locationScore);
       }
 
+      // 🎯 Criteria 3: City Match (Exact Slug Check)
+      if (targetCitySlugForMatching) {
+        const cityMatch = profile.city?.slug === targetCitySlugForMatching;
+        weights.push(cityMatch ? 1 : 0);
+      }
+
+      // 🎯 Criteria 4: State Match (Exact Slug Check)
+      if (targetStateSlugForMatching) {
+        const stateMatch = profile.state?.slug === targetStateSlugForMatching;
+        weights.push(stateMatch ? 1 : 0);
+      }
+
+      // Criteria 5: Category
       if (category) {
         weights.push(profile.category?.slug === category ? 1 : 0);
       }
 
+      // Criteria 6: Availability
       if (availableDate) {
         weights.push(1);
       }
 
+      // Criteria 7: Budget
       if (minPrice !== undefined || maxPrice !== undefined) {
         const minVal =
           minPrice !== undefined ? Number(minPrice) : Number.NEGATIVE_INFINITY;
@@ -677,6 +748,7 @@ class VendorProfileService {
           lowestPackagePrice <= maxVal;
         weights.push(intersects ? 1 : 0);
       }
+
       const matchPercentage =
         weights.length === 0
           ? 100
@@ -696,6 +768,8 @@ class VendorProfileService {
         phone: profile.phone || null,
         location: profile.location || null,
         category: profile.category?.name || null,
+        state: profile.state?.name || null,
+        city: profile.city?.name || null,
         matchPercentage,
         isSaved,
         thumbnailImage:
@@ -704,12 +778,13 @@ class VendorProfileService {
           low: lowestPackagePrice,
           high: highestPackagePrice,
         },
-        // subscriptionTierPrice: profile.currentSubscription?.plan?.price || 0,
       };
     });
 
+    const sortedByMatch = normalizedProfiles.sort((a, b) => b.matchPercentage - a.matchPercentage);
+
     return {
-      data: normalizedProfiles,
+      data: sortedByMatch,
       pagination: {
         currentPage: filterDTO.page,
         itemsPerPage: filterDTO.limit,
@@ -893,6 +968,8 @@ class VendorProfileService {
       where: { userId },
       include: {
         category: true,
+        city: true,
+        state: true,
         user: {
           select: {
             id: true,
@@ -932,6 +1009,8 @@ class VendorProfileService {
       profileImage: profile.user.avatarUrl || null,
       portfolioImages: profile.portfolioImages || [],
       packages: profile.packages || [],
+      city: profile.city || null,
+      state: profile.state || null,
       subscriptionPlan: profile.currentSubscription || null,
     };
 
