@@ -52,6 +52,52 @@ class PaymentController {
         break;
       }
 
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        if (invoice.subscription) {
+          try {
+            await this.paymentService.handleSubscriptionRenewal(invoice);
+            console.log(
+              `Subscription successfully renewed for Customer: ${invoice.customer}`,
+            );
+          } catch (error) {
+            console.error(`DB Error during subscription renewal:`, error);
+            return res.status(500).send('Internal Server Error');
+          }
+        }
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        try {
+          await this.paymentService.handleSubscriptionUpdate(subscription);
+          console.log(
+            `Subscription updated for: ${subscription.id}. Status: ${subscription.status}`,
+          );
+        } catch (error) {
+          console.error(`DB Error during subscription update webhook:`, error);
+          return res.status(500).send('Internal Server Error');
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        try {
+          await this.paymentService.handleSubscriptionCancellation(
+            subscription,
+          );
+          console.log(
+            `Subscription deleted/expired for Subscription ID: ${subscription.id}`,
+          );
+        } catch (error) {
+          console.error(`DB Error during subscription deletion:`, error);
+          return res.status(500).send('Internal Server Error');
+        }
+        break;
+      }
+
       default:
         console.log(`Unhandled event type ${event.type}`);
     }

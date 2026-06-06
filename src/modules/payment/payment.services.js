@@ -3,6 +3,14 @@ const { prisma } = require('../../config/database');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 class PaymentService {
+  mapStripeSubscriptionStatus(stripeStatus) {
+    if (stripeStatus === 'canceled') return 'CANCELED';
+    if (stripeStatus === 'unpaid' || stripeStatus === 'incomplete_expired') {
+      return 'EXPIRED';
+    }
+    return 'ACTIVE';
+  }
+
   async createRegistrationCheckoutSession({
     subscriptionPlan,
     vendorData,
@@ -301,16 +309,168 @@ class PaymentService {
         },
       });
 
-      // D. Log the payment history record securely
       await tx.payment.create({
         data: {
           vendorId: meta.vendorId,
           subscriptionId: newSubscription.id,
-          amount: (session.amount_total || 0) / 100, // Convert cents to dollars/main currency
+          amount: (session.amount_total || 0) / 100,
           status: 'SUCCESS',
           stripeIntentId: targetIntentId,
           purchaseDate: new Date(),
         },
+      });
+    });
+  }
+
+  async handleSubscriptionRenewal(invoice) {
+    const stripeSubscriptionId = invoice.subscription;
+    if (!stripeSubscriptionId) return;
+
+    const vendorSubscription = await prisma.vendorSubscription.findUnique({
+      where: { stripeSubscriptionId },
+    });
+
+    if (!vendorSubscription) {
+      console.warn(
+        `[Webhook] Subscription not found for renewal: ${stripeSubscriptionId}`,
+      );
+      return;
+    }
+
+    const periodStart =
+      invoice.lines?.data?.[0]?.period?.start || invoice.period_start;
+    const periodEnd =
+      invoice.lines?.data?.[0]?.period?.end || invoice.period_end;
+
+    const startsAt = periodStart
+      ? new Date(periodStart * 1000)
+      : vendorSubscription.startsAt;
+    const endsAt = periodEnd
+      ? new Date(periodEnd * 1000)
+      : (() => {
+          const next = new Date(vendorSubscription.endsAt);
+          next.setDate(next.getDate() + 30);
+          return next;
+        })();
+
+    const paymentReference =
+      invoice.payment_intent || invoice.charge || invoice.id;
+
+    if (paymentReference) {
+      const existingPayment = await prisma.payment.findUnique({
+        where: { stripeIntentId: paymentReference },
+      });
+
+      if (existingPayment) {
+        return;
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.vendorSubscription.update({
+        where: { id: vendorSubscription.id },
+        data: {
+          status: 'ACTIVE',
+          startsAt,
+          endsAt,
+        },
+      });
+
+      await tx.payment.create({
+        data: {
+          vendorId: vendorSubscription.vendorId,
+          subscriptionId: vendorSubscription.id,
+          amount: (invoice.amount_paid || invoice.amount_due || 0) / 100,
+          currency: (invoice.currency || 'usd').toUpperCase(),
+          status: 'SUCCESS',
+          stripeIntentId: paymentReference,
+          purchaseDate: new Date(),
+        },
+      });
+
+      await tx.vendorProfile.update({
+        where: { id: vendorSubscription.vendorId },
+        data: { currentSubscriptionId: vendorSubscription.id },
+      });
+    });
+  }
+
+  async handleSubscriptionUpdate(subscription) {
+    const stripeSubscriptionId = subscription.id;
+    if (!stripeSubscriptionId) return;
+
+    const vendorSubscription = await prisma.vendorSubscription.findUnique({
+      where: { stripeSubscriptionId },
+    });
+
+    if (!vendorSubscription) {
+      console.warn(
+        `[Webhook] Subscription not found for update: ${stripeSubscriptionId}`,
+      );
+      return;
+    }
+    
+
+    const startsAt = subscription.current_period_start
+      ? new Date(subscription.current_period_start * 1000)
+      : vendorSubscription.startsAt;
+    const endsAt = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000)
+      : vendorSubscription.endsAt;
+
+    const mappedStatus = this.mapStripeSubscriptionStatus(subscription.status);
+
+    await prisma.$transaction(async (tx) => {
+      const updatedSubscription = await tx.vendorSubscription.update({
+        where: { id: vendorSubscription.id },
+        data: {
+          status: mappedStatus,
+          startsAt,
+          endsAt,
+        },
+      });
+
+      await tx.vendorProfile.update({
+        where: { id: vendorSubscription.vendorId },
+        data: {
+          currentSubscriptionId:
+            mappedStatus === 'ACTIVE' ? updatedSubscription.id : null,
+        },
+      });
+    });
+  }
+
+  async handleSubscriptionCancellation(subscription) {
+    const stripeSubscriptionId = subscription.id;
+    if (!stripeSubscriptionId) return;
+
+    const vendorSubscription = await prisma.vendorSubscription.findUnique({
+      where: { stripeSubscriptionId },
+    });
+
+    if (!vendorSubscription) {
+      console.warn(
+        `[Webhook] Subscription not found for cancellation: ${stripeSubscriptionId}`,
+      );
+      return;
+    }
+
+    const endsAt = subscription.ended_at
+      ? new Date(subscription.ended_at * 1000)
+      : new Date();
+
+    await prisma.$transaction(async (tx) => {
+      await tx.vendorSubscription.update({
+        where: { id: vendorSubscription.id },
+        data: {
+          status: 'CANCELED',
+          endsAt,
+        },
+      });
+
+      await tx.vendorProfile.update({
+        where: { id: vendorSubscription.vendorId },
+        data: { currentSubscriptionId: null },
       });
     });
   }
