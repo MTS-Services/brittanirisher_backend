@@ -46,6 +46,7 @@ class CoupleProfileService {
           role: 'COUPLE',
           status: 'ACTIVE',
           emailVerified: true,
+          phone,
         },
       });
 
@@ -113,6 +114,10 @@ class CoupleProfileService {
         include: {
           city: true,
           state: true,
+          weldingStyle: true,
+          user: {
+            select: { email: true, phone: true },
+          },
         },
         orderBy: { [sortBy]: sortOrder },
         skip: offset,
@@ -122,16 +127,21 @@ class CoupleProfileService {
     ]);
 
     const updateData = coupleProfiles.map((profile) => ({
-      ...profile,
+      name: profile.name,
+      email: profile.user.email,
+      phone: profile.phone,
+      location: profile.location,
+      weldingStyle: profile.weldingStyle ? profile.weldingStyle.name : null,
       city: profile.city ? profile.city.name : null,
       state: profile.state ? profile.state.name : null,
+      weldingDate: profile.weldingDate,
       budget: Number(profile.budget),
       expendBudget: Number(profile.expendBudget),
       remainingBudget: profile.budget - profile.expendBudget,
     }));
 
     return {
-      data: coupleProfiles,
+      data: updateData,
       pagination: {
         currentPage: filterDTO.page,
         itemsPerPage: filterDTO.limit,
