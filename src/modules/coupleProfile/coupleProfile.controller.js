@@ -51,14 +51,19 @@ class CoupleProfileController {
   });
 
   updateCoupleProfile = asyncHandler(async (req, res) => {
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const imageUrl = `/uploads/${req?.file?.filename}`;
+    const body = req.body;
     const coupleProfileId = req.user.coupleProfileId;
     if (!coupleProfileId) {
       return res
         .status(404)
         .json({ message: 'Couple profile not found for the user' });
     }
-    const body = { ...req.body, profileImage: imageUrl };
+
+    if (req?.file?.filename) {
+      body.profileImage = imageUrl;
+    }
+
     const result = await this.services.updateCoupleProfile(
       coupleProfileId,
       body,
