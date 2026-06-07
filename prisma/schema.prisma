@@ -539,3 +539,16 @@ model VendorBooking {
 
   @@map("vendor_bookings")
 }
+
+model Message {
+  id        String   @id @default(cuid())
+  message   String   @db.Text
+  firstName String
+  lastName  String
+  subject   String
+  email     String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("messages")
+}

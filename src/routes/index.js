@@ -26,6 +26,7 @@ const DashboardRoutes = require('../modules/dashboard/dashboard.route');
 const timelineRoutes = require('../modules/coupleTimeline/coupleTimeline.route');
 const statesRoutes = require('../modules/states/states.route');
 const cityRoutes = require('../modules/city/city.route');
+const MessageRoutes = require('../modules/message/message.route');
 const apiDocsHandler = require('../modules/docs/apiDocsHandler');
 
 router.get('/health', (req, res) => {
@@ -70,4 +71,5 @@ router.use('/dashboard', DashboardRoutes);
 router.use('/couple-timeline', timelineRoutes);
 router.use('/state', statesRoutes);
 router.use('/city', cityRoutes);
+router.use('/message', MessageRoutes);
 module.exports = router;
