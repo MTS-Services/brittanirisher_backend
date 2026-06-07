@@ -10,6 +10,7 @@ const USER_SELECT = {
   name: true,
   email: true,
   role: true,
+  phone: true,
   status: true,
   profileStep: true,
   isActive: true,
