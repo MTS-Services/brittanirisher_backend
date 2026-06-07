@@ -123,7 +123,7 @@ class VendorAvailabilityService {
 
     const days = await prisma.vendorAvailability.findMany({
       where: {
-        // vendorId,
+        vendorId,
         blockedDate: {
           gte: startDate,
           lt: endDate,

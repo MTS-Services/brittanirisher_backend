@@ -781,7 +781,9 @@ class VendorProfileService {
       };
     });
 
-    const sortedByMatch = normalizedProfiles.sort((a, b) => b.matchPercentage - a.matchPercentage);
+    const sortedByMatch = normalizedProfiles.sort(
+      (a, b) => b.matchPercentage - a.matchPercentage,
+    );
 
     return {
       data: sortedByMatch,
@@ -997,6 +999,7 @@ class VendorProfileService {
     }
 
     const modifiedProfile = {
+      id: profile.id,
       name: profile.user?.name || null,
       email: profile.user?.email || null,
       phone: profile.phone || null,
