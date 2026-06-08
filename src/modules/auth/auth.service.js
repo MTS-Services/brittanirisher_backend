@@ -229,6 +229,26 @@ class AuthService {
     }
   }
 
+  async getTokenOnly(loginDTO) {
+    try {
+      const user = await this.authRepository.findUserByEmail(
+        loginDTO.email,
+        true,
+      );
+      if (!user) {
+        throw new AppError('Invalid email or password', 401);
+      }
+
+      delete user.passwordHash;
+
+      const tokens = generateTokenPair(user);
+      return new AuthResponseDTO(user, tokens);
+    } catch (error) {
+      logger.error('Login failed:', error);
+      throw error;
+    }
+  }
+
   async refreshToken(refreshTokenDTO) {
     try {
       const decoded = verifyRefreshToken(refreshTokenDTO.refreshToken);

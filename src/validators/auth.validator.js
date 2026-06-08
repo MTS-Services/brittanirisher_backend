@@ -45,6 +45,10 @@ const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
+const getTokenSchema = Joi.object({
+  email,
+});
+
 /**
  * Refresh token validation schema
  */
@@ -110,6 +114,7 @@ const updateProfileSchema = Joi.object({
 module.exports = {
   registerSchema,
   loginSchema,
+  getTokenSchema,
   otpVerifySchema,
   resendOtpSchema,
   refreshTokenSchema,

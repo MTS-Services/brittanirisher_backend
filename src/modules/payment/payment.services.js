@@ -35,7 +35,6 @@ class PaymentService {
     } = vendorData;
 
     const session = await stripe.checkout.sessions.create({
-      
       payment_method_types: ['card'],
       mode: 'subscription',
       customer_email: email.toLowerCase(),
@@ -80,8 +79,8 @@ class PaymentService {
         cityId: cityId,
         stateId: stateId,
       },
-      success_url: `${process.env.FRONTEND_URL}/registration-success?success=true`,
-      cancel_url: `${process.env.FRONTEND_URL}/pricing?canceled=true`,
+      success_url: `${process.env.FRONTEND_URL}/registration-success?email=${email}&planName=${subscriptionPlan.name}${subscriptionPlan.priceMonthly ? `&planPrice=${subscriptionPlan.priceMonthly}` : ''}&userName=${encodeURIComponent(name)}}`,
+      cancel_url: `${process.env.FRONTEND_URL}/registration-cancel?canceled=true`,
     });
 
     return {
@@ -231,8 +230,8 @@ class PaymentService {
         oldSubscriptionId: currentSubscription.id,
         newPlanId: newPlan.id,
       },
-      success_url: `${process.env.FRONTEND_URL}/dashboard/billing?success=true`,
-      cancel_url: `${process.env.FRONTEND_URL}/dashboard/billing?canceled=true`,
+      success_url: `${process.env.FRONTEND_URL}/vendor/dashboard/payment-success?updated=true&planName=${newPlan.name}&planPrice=${newPlan.priceMonthly}`,
+      cancel_url: `${process.env.FRONTEND_URL}/vendor/dashboard/payment-canceled`,
     });
 
     return {
@@ -410,7 +409,6 @@ class PaymentService {
       );
       return;
     }
-    
 
     const startsAt = subscription.current_period_start
       ? new Date(subscription.current_period_start * 1000)

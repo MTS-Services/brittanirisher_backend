@@ -17,6 +17,7 @@ const {
   resetPasswordSchema,
   otpVerifySchema,
   resendOtpSchema,
+  getTokenSchema,
 } = require('../../validators/auth.validator');
 
 const router = express.Router();
@@ -50,6 +51,11 @@ router.post(
  * @access Public
  */
 router.post('/login', validate(loginSchema), authController.login);
+router.post(
+  '/get-token',
+  validate(getTokenSchema),
+  authController.getTokenOnly,
+);
 
 /**
  * @route POST /api/v1/auth/refresh

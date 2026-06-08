@@ -12,6 +12,7 @@ const {
   ResetPasswordDTO,
   VerifyOtpDTO,
   ResendOtpDTO,
+  GetTokenDTO,
 } = require('./auth.dto');
 const logger = require('../../utils/logger');
 
@@ -61,6 +62,12 @@ class AuthController {
     //   userAgent: req.get('User-Agent'),
     // });
 
+    res.sendSuccess(result, 'Login successful');
+  });
+
+  getTokenOnly = asyncHandler(async (req, res) => {
+    const loginDTO = new GetTokenDTO(req.body);
+    const result = await this.authService.getTokenOnly(loginDTO);
     res.sendSuccess(result, 'Login successful');
   });
 

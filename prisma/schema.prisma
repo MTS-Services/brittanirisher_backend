@@ -66,6 +66,7 @@ model User {
   joinedAt      DateTime      @default(now())
   lastLoginAt   DateTime?
   avatarUrl     String?
+  tempAuthToken String?       @unique
 
   // Relations
   otpTokens     OtpToken[]

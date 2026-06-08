@@ -55,6 +55,12 @@ class LoginDTO {
   }
 }
 
+class GetTokenDTO {
+  constructor(data) {
+    this.email = data.email;
+  }
+}
+
 /**
  * User response DTO (excludes sensitive information)
  */
@@ -201,6 +207,7 @@ class UpdateProfileDTO {
 module.exports = {
   RegisterDTO,
   LoginDTO,
+  GetTokenDTO,
   UserResponseDTO,
   AuthResponseDTO,
   RefreshTokenDTO,
