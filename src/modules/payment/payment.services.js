@@ -230,7 +230,7 @@ class PaymentService {
         oldSubscriptionId: currentSubscription.id,
         newPlanId: newPlan.id,
       },
-      success_url: `${process.env.FRONTEND_URL}/vendor/dashboard/payment-success?updated=true&planName=${newPlan.name}&planPrice=${newPlan.priceMonthly}`,
+      success_url: `${process.env.FRONTEND_URL}/vendor/dashboard/payment-success?updated=true&planName=${newPlan.planName}&planPrice=${newPlan.priceMonthly}`,
       cancel_url: `${process.env.FRONTEND_URL}/vendor/dashboard/payment-canceled`,
     });
 
