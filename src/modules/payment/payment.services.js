@@ -79,7 +79,7 @@ class PaymentService {
         cityId: cityId,
         stateId: stateId,
       },
-      success_url: `${process.env.FRONTEND_URL}/registration-success?email=${email}&planName=${subscriptionPlan.name}${subscriptionPlan.priceMonthly ? `&planPrice=${subscriptionPlan.priceMonthly}` : ''}&userName=${encodeURIComponent(name)}}`,
+      success_url: `${process.env.FRONTEND_URL}/registration-success?email=${email}&planName=${subscriptionPlan.planName}${subscriptionPlan.priceMonthly ? `&planPrice=${subscriptionPlan.priceMonthly}` : ''}&userName=${encodeURIComponent(name)}}`,
       cancel_url: `${process.env.FRONTEND_URL}/registration-cancel?canceled=true`,
     });
 
