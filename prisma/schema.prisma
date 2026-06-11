@@ -204,6 +204,8 @@ model CoupleProfile {
   taskSections           TaskSection[]
   savedVendors           SavedVendor[]
   coupleTimelineSections CoupleTimelineSection[]
+  vendorProfileViews     VendorProfileView[]     @relation("UserViews")
+  reviews                Review[]
 
   @@map("couple_profiles")
 }
@@ -356,6 +358,8 @@ model VendorProfile {
   status           VendorStatus @default(PENDING)
   categoryId       String
   category         Category     @relation(fields: [categoryId], references: [id])
+  socialLinks      Json?
+  contactLinks     Json?
 
   packages        VendorPackage[]
   portfolioImages VendorPortfolio[]
@@ -364,13 +368,15 @@ model VendorProfile {
 
   subscriptions VendorSubscription[] @relation("SubHistory")
 
-  vendorBookings VendorBooking[]
-  savedVendors   SavedVendor[]
-  payments       Payment[]
-  state          State?          @relation(fields: [stateId], references: [id])
-  stateId        String?
-  city           City?           @relation(fields: [cityId], references: [id])
-  cityId         String?
+  vendorBookings     VendorBooking[]
+  savedVendors       SavedVendor[]
+  payments           Payment[]
+  state              State?              @relation(fields: [stateId], references: [id])
+  stateId            String?
+  city               City?               @relation(fields: [cityId], references: [id])
+  cityId             String?
+  reviews            Review[]
+  vendorProfileViews VendorProfileView[] @relation("VendorViews")
 
   @@map("vendor_profiles")
 }
@@ -552,4 +558,38 @@ model Message {
   createdAt DateTime @default(now())
 
   @@map("messages")
+}
+
+model Review {
+  id      String @id @default(cuid())
+  rating  Int
+  comment String @db.Text
+
+  isApproved Boolean  @default(true)
+  images     String[]
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  coupleId String
+  couple   CoupleProfile @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("vendor_reviews")
+}
+
+model VendorProfileView {
+  id String @id @default(cuid())
+
+  vendorId String
+  vendor   VendorProfile @relation("VendorViews", fields: [vendorId], references: [id], onDelete: Cascade)
+
+  viewerId String?
+  viewer   CoupleProfile? @relation("UserViews", fields: [viewerId], references: [id], onDelete: Cascade)
+
+  viewerIp  String
+  userAgent String?
+  viewedAt  DateTime @default(now())
+
+  @@map("vendor_profile_views")
 }

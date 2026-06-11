@@ -125,6 +125,48 @@ class UpdateVendorProfileDTO {
 
     if (data.stateId !== undefined)
       this.stateId = data.stateId ? data.stateId.trim() : null;
+
+    if (data.socialLinks !== undefined) {
+      this.socialLinks = {};
+      const platforms = [
+        'facebook',
+        'instagram',
+        'linkedin',
+        'youtube',
+        'tiktok',
+        'pinterest',
+        'twitter',
+      ];
+
+      platforms.forEach((platform) => {
+        if (data.socialLinks?.[platform] !== undefined) {
+          this.socialLinks[platform] = data.socialLinks[platform]
+            ? data.socialLinks[platform].trim()
+            : null;
+        }
+      });
+    }
+
+    if (data.contactLinks !== undefined) {
+      this.contactLinks = {};
+      const contactMethods = [
+        'whatsapp',
+        'messenger',
+        'telegram',
+        'email',
+        'phone',
+        'website',
+        'googleMaps',
+      ];
+
+      contactMethods.forEach((method) => {
+        if (data.contactLinks?.[method] !== undefined) {
+          this.contactLinks[method] = data.contactLinks[method]
+            ? data.contactLinks[method].trim()
+            : null;
+        }
+      });
+    }
   }
 
   toDatabase() {

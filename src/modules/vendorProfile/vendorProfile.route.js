@@ -27,6 +27,12 @@ router.get(
 );
 
 router.get(
+  '/home',
+  validateQuery(vendorFilterQuerySchema),
+  controller.getVendorProfilesHomePage,
+);
+
+router.get(
   '/couple',
   authenticate,
   authorize(['COUPLE']),
@@ -51,7 +57,7 @@ router.get(
 // Authenticated vendor routes
 router.post(
   '/',
-  upload.array('images', 10),
+  upload.array('images'),
   packageParseMiddleware(),
   validate(createVendorProfileSchema),
   controller.createVendorProfile,
@@ -78,7 +84,7 @@ router.patch(
   authorize(['VENDOR', 'ADMIN']),
   upload.fields([
     { name: 'profileImage', maxCount: 1 },
-    { name: 'images', maxCount: 20 },
+    { name: 'images', maxCount: 200 },
   ]),
   packageParseMiddleware(),
   validate(updateVendorProfileSchema),

@@ -42,6 +42,24 @@ const updateVendorProfileSchema = Joi.object({
   images: Joi.any().optional(),
   cityId: Joi.string().trim().optional(),
   stateId: Joi.string().trim().optional(),
+  socialLinks: Joi.object({
+    facebook: Joi.string().uri().allow('').optional(),
+    instagram: Joi.string().uri().allow('').optional(),
+    linkedin: Joi.string().uri().allow('').optional(),
+    youtube: Joi.string().uri().allow('').optional(),
+    tiktok: Joi.string().uri().allow('').optional(),
+    pinterest: Joi.string().uri().allow('').optional(),
+    twitter: Joi.string().uri().allow('').optional(),
+  }).optional(),
+  contactLinks: Joi.object({
+    whatsapp: Joi.string().trim().allow('').optional(),
+    messenger: Joi.string().trim().allow('').optional(),
+    telegram: Joi.string().trim().allow('').optional(),
+    email: Joi.string().email().allow('').optional(),
+    phone: Joi.string().trim().allow('').optional(),
+    website: Joi.string().uri().allow('').optional(),
+    googleMaps: Joi.string().uri().allow('').optional(),
+  }).optional(),
 });
 
 const vendorProfileIdParamSchema = Joi.object({

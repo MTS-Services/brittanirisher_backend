@@ -5,7 +5,7 @@ const createSubscriptionPlanSchema = Joi.object({
   priceMonthly: Joi.number().precision(2).min(0).required(),
   sortDescription: Joi.string().trim().min(2).max(520).required(),
   validFor: Joi.string().trim().min(2).max(220).optional(),
-  portfolioLimit: Joi.number().integer().min(0).default(10),
+  portfolioLimit: Joi.number().integer().min(-1).default(10),
   featuresAllowed: Joi.array()
     .items(
       Joi.object({
@@ -21,7 +21,7 @@ const updateSubscriptionPlanSchema = Joi.object({
   sortDescription: Joi.string().trim().min(2).max(520).optional(),
   validFor: Joi.string().trim().min(2).max(220).optional(),
   priceMonthly: Joi.number().precision(2).min(0).optional(),
-  portfolioLimit: Joi.number().integer().min(0).optional(),
+  portfolioLimit: Joi.number().integer().min(-1).optional(),
   featuresAllowed: Joi.array()
     .items(
       Joi.object({

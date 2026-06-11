@@ -17,6 +17,22 @@ const packageParseMiddleware = () => {
         req.body.highlightedServices = JSON.parse(req.body.highlightedServices);
       }
 
+      if (
+        req.body &&
+        req.body.socialLinks &&
+        typeof req.body.socialLinks === 'string'
+      ) {
+        req.body.socialLinks = JSON.parse(req.body.socialLinks);
+      }
+
+      if (
+        req.body &&
+        req.body.contactLinks &&
+        typeof req.body.contactLinks === 'string'
+      ) {
+        req.body.contactLinks = JSON.parse(req.body.contactLinks);
+      }
+
       next();
     } catch (error) {
       return res.status(400).json({

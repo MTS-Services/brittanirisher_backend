@@ -176,8 +176,6 @@ class VendorProfileService {
       stateId,
     } = data;
 
-    console.log('Creating vendor profile with data:', data);
-
     const existingUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     });
@@ -216,6 +214,12 @@ class VendorProfileService {
         imageUrls,
         hashedPassword,
       });
+    }
+
+    if (subscriptionPlan.portfolioLimit !== -1) {
+      if (imageUrls.length > subscriptionPlan.portfolioLimit) {
+        imageUrls = imageUrls.slice(0, subscriptionPlan.portfolioLimit);
+      }
     }
 
     const startsAt = new Date();
@@ -491,6 +495,190 @@ class VendorProfileService {
         },
         // subscriptionTierPrice:
         //   profile.currentSubscription?.plan?.priceMonthly || 0,
+      };
+    });
+
+    return {
+      data: normalizedProfiles,
+      pagination: {
+        currentPage: filterDTO.page,
+        itemsPerPage: filterDTO.limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / filterDTO.limit),
+        hasNextPage: filterDTO.page < Math.ceil(total / filterDTO.limit),
+        hasPreviousPage: filterDTO.page > 1,
+      },
+    };
+  }
+
+  async getVendorProfilesHomePage(filterDTO) {
+    const {
+      sortBy,
+      sortOrder,
+      search,
+      limit,
+      locationSearch,
+      category,
+      availableDate,
+      minPrice,
+      city,
+      state,
+      maxPrice,
+      status = 'APPROVED',
+    } = filterDTO;
+
+    const offset = filterDTO.getOffset();
+    const whereCondition = [];
+
+    // 1. Filter: Text search
+    if (search) {
+      whereCondition.push({
+        OR: [
+          { businessName: { contains: search, mode: 'insensitive' } },
+          { speciality: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    // 2. Filter: Location strict search
+    if (locationSearch) {
+      whereCondition.push({
+        OR: [{ location: { contains: locationSearch, mode: 'insensitive' } }],
+      });
+    }
+
+    // 3. Filter: Service Category
+    if (category) {
+      whereCondition.push({ category: { slug: category } });
+    }
+
+    if (city) {
+      whereCondition.push({ city: { slug: city } });
+    }
+
+    if (state) {
+      whereCondition.push({ state: { slug: state } });
+    }
+
+    // 4. Filter: Status validation
+    if (status) {
+      whereCondition.push({ status: status });
+    }
+
+    // 5. Filter: Date Availability Check
+    if (availableDate) {
+      const date = new Date(availableDate);
+      date.setHours(0, 0, 0, 0);
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      whereCondition.push({
+        NOT: {
+          availabilities: {
+            some: {
+              blockedDate: { gte: date, lt: nextDate },
+              status: { in: ['BOOKED', 'UNAVAILABLE'] },
+            },
+          },
+        },
+      });
+    }
+
+    // 6. Filter: Price Range Constraints
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const priceFilter = {};
+      if (minPrice !== undefined && !Number.isNaN(minPrice))
+        priceFilter.gte = minPrice;
+      if (maxPrice !== undefined && !Number.isNaN(maxPrice))
+        priceFilter.lte = maxPrice;
+
+      whereCondition.push({
+        packages: {
+          some: { price: priceFilter },
+        },
+      });
+    }
+
+    const bestPlan = await prisma.subscriptionPlan.findFirst({
+      orderBy: { priceMonthly: 'desc' },
+      select: { id: true, priceMonthly: true },
+    });
+
+    if (bestPlan && Number(bestPlan.priceMonthly) > 0) {
+      whereCondition.push({
+        currentSubscription: {
+          is: {
+            planId: bestPlan.id,
+          },
+        },
+      });
+    }
+
+    const finalWhere = whereCondition.length > 0 ? { AND: whereCondition } : {};
+
+    // 7. DB Query
+    const [profiles, total] = await Promise.all([
+      prisma.vendorProfile.findMany({
+        where: finalWhere,
+        include: {
+          category: true,
+          currentSubscription: {
+            include: { plan: true },
+          },
+          city: true,
+          state: true,
+          portfolioImages: {
+            orderBy: { sortOrder: 'asc' },
+            take: 1,
+          },
+          packages: {
+            select: { id: true, packageName: true, price: true },
+          },
+          user: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: [
+          {
+            [sortBy || 'createdAt']: sortOrder || 'desc',
+          },
+        ],
+        skip: offset,
+        take: limit,
+      }),
+      prisma.vendorProfile.count({ where: finalWhere }),
+    ]);
+
+    // 8. Map Data Outputs
+    const normalizedProfiles = profiles.map((profile) => {
+      const packagePrices = (profile.packages || []).map((pkg) =>
+        Number(pkg.price),
+      );
+      const lowestPackagePrice = packagePrices.length
+        ? Math.min(...packagePrices)
+        : null;
+      const highestPackagePrice = packagePrices.length
+        ? Math.max(...packagePrices)
+        : null;
+
+      return {
+        id: profile.id,
+        name: profile.user?.name || null,
+        businessName: profile.businessName,
+        email: profile.user?.email || null,
+        phone: profile.phone || null,
+        location: profile.location || null,
+        city: profile.city?.name || null,
+        state: profile.state?.name || null,
+        category: profile.category?.name || null,
+        speciality: profile.speciality || null,
+        aboutMe: profile.aboutMe || null,
+        thumbnailImage:
+          profile.coverImage || profile.portfolioImages?.[0]?.mediaUrl || null,
+        packagePriceRange: {
+          low: lowestPackagePrice,
+          high: highestPackagePrice,
+        },
       };
     });
 
@@ -955,6 +1143,60 @@ class VendorProfileService {
           orderBy: { sortOrder: 'asc' },
         },
         packages: true,
+        currentSubscription: {
+          include: {
+            plan: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new AppError('Vendor profile not found', 404);
+    }
+
+    const isPaidPlan =
+      Number(profile.currentSubscription?.plan?.priceMonthly || 0) > 0;
+
+    const { currentSubscription, ...profileWithoutSubscription } = profile;
+
+    if (!isPaidPlan) {
+      const { socialLinks, ...freePlanProfile } = profileWithoutSubscription;
+      return {
+        ...freePlanProfile,
+        isSocial: false,
+      };
+    }
+
+    return {
+      ...profileWithoutSubscription,
+      isSocial: true,
+    };
+  }
+
+  async getVendorProfileById2(id) {
+    const profile = await prisma.vendorProfile.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            status: true,
+          },
+        },
+        portfolioImages: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        packages: true,
+        currentSubscription: {
+          include: {
+            plan: true,
+          },
+        },
       },
     });
 
@@ -1021,7 +1263,9 @@ class VendorProfileService {
   }
 
   async updateVendorProfile(id, profileImageUrl, imageUrls, data) {
-    const existingProfile = await this.getVendorProfileById(id);
+    const existingProfile = await this.getVendorProfileById2(id);
+    const portfolioLimit =
+      existingProfile.currentSubscription?.plan?.portfolioLimit;
     const dtoData = {
       ...data.toDatabase(),
     };
@@ -1034,6 +1278,20 @@ class VendorProfileService {
     if (dtoData.email !== undefined) {
       userData.email = dtoData.email?.toLowerCase();
       delete dtoData.email;
+    }
+
+    if (dtoData.cityId !== undefined) {
+      dtoData.city = dtoData.cityId
+        ? { connect: { id: dtoData.cityId } }
+        : { disconnect: true };
+      delete dtoData.cityId;
+    }
+
+    if (dtoData.stateId !== undefined) {
+      dtoData.state = dtoData.stateId
+        ? { connect: { id: dtoData.stateId } }
+        : { disconnect: true };
+      delete dtoData.stateId;
     }
 
     if (profileImageUrl) {
@@ -1049,6 +1307,19 @@ class VendorProfileService {
       }
 
       if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+        if (portfolioLimit !== undefined && portfolioLimit !== -1) {
+          const currentPortfolioCount = await tx.vendorPortfolio.count({
+            where: { vendorId: id },
+          });
+
+          if (currentPortfolioCount + imageUrls.length > portfolioLimit) {
+            throw new AppError(
+              `Portfolio limit exceeded. You can upload up to ${portfolioLimit} images in total.`,
+              400,
+            );
+          }
+        }
+
         const lastPortfolioImage = await tx.vendorPortfolio.findFirst({
           where: { vendorId: id },
           select: { sortOrder: true },
@@ -1273,9 +1544,9 @@ class VendorProfileService {
       throw new AppError('New subscription plan not found', 404);
     }
 
-    if (currentSubscription.planId === newPackageId) {
-      throw new AppError('Already subscribed to this plan', 400);
-    }
+    // if (currentSubscription.planId === newPackageId) {
+    //   throw new AppError('Already subscribed to this plan', 400);
+    // }
 
     if (Number(newPlan.priceMonthly) > 0) {
       return await this.paymentService.createSubscriptionUpdateSession({
@@ -1284,32 +1555,37 @@ class VendorProfileService {
         newPlan,
       });
     } else {
-      const startsAt = new Date();
-      const endsAt = new Date();
-      endsAt.setDate(startsAt.getDate() + 30);
+      // const startsAt = new Date();
+      // const endsAt = new Date();
+      // endsAt.setDate(startsAt.getDate() + 30);
 
-      await prisma.$transaction(async (tx) => {
-        await tx.vendorSubscription.update({
-          where: { id: currentSubscription.id },
-          data: { status: 'INACTIVE' },
-        });
-        const newSubscription = await tx.vendorSubscription.create({
-          data: {
-            vendorId,
-            planId: newPackageId,
-            status: 'ACTIVE',
-            startsAt,
-            endsAt,
-          },
-        });
-        await tx.vendorProfile.update({
-          where: { id: vendorId },
-          data: {
-            currentSubscriptionId: newSubscription.id,
-            stripeCustomerId: null,
-          },
-        });
-      });
+      // await prisma.$transaction(async (tx) => {
+      //   await tx.vendorSubscription.update({
+      //     where: { id: currentSubscription.id },
+      //     data: { status: 'INACTIVE' },
+      //   });
+      //   const newSubscription = await tx.vendorSubscription.create({
+      //     data: {
+      //       vendorId,
+      //       planId: newPackageId,
+      //       status: 'ACTIVE',
+      //       startsAt,
+      //       endsAt,
+      //     },
+      //   });
+      //   await tx.vendorProfile.update({
+      //     where: { id: vendorId },
+      //     data: {
+      //       currentSubscriptionId: newSubscription.id,
+      //       stripeCustomerId: null,
+      //     },
+      //   });
+      // });
+
+      throw new AppError(
+        'Free plan activation is currently unavailable. Please add a premium plan to your subscription to continue.',
+        503,
+      );
     }
 
     return newPlan;

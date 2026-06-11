@@ -28,9 +28,9 @@ const initSubscriptionCron = () => {
         return;
       }
 
-      const filterStaterPlans = expiredSubscriptions.filter(
-        (sub) => sub.plan.priceMonthly === 0,
-      );
+      // const filterStaterPlans = expiredSubscriptions.filter(
+      //   (sub) => sub.plan.priceMonthly === 0,
+      // );
 
       const expiredIds = expiredSubscriptions.map((sub) => sub.id);
 
@@ -45,19 +45,19 @@ const initSubscriptionCron = () => {
         }),
       ]);
 
-      if (filterStaterPlans.length > 0) {
-        const filterStaterPlanIds = filterStaterPlans.map((sub) => sub.id);
-        await prisma.vendorSubscription.updateMany({
-          where: {
-            id: { in: filterStaterPlanIds },
-          },
-          data: {
-            startsAt: date.now(),
-            endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            status: 'ACTIVE',
-          },
-        });
-      }
+      // if (filterStaterPlans.length > 0) {
+      //   const filterStaterPlanIds = filterStaterPlans.map((sub) => sub.id);
+      //   await prisma.vendorSubscription.updateMany({
+      //     where: {
+      //       id: { in: filterStaterPlanIds },
+      //     },
+      //     data: {
+      //       startsAt: date.now(),
+      //       endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      //       status: 'ACTIVE',
+      //     },
+      //   });
+      // }
 
       console.log(
         `[Cron Automation]: Successfully expired ${expiredIds.length} subscriptions and cleared profile linkages.`,
