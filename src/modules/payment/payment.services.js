@@ -51,7 +51,7 @@ class PaymentService {
             product_data: {
               name: 'Subscribe to Professional Vendor Plan',
             },
-            unit_amount: subscriptionPlan.priceMonthly * 100,
+            unit_amount: Number(subscriptionPlan.priceMonthly) * 100,
             recurring: {
               interval: 'month',
             },
@@ -472,6 +472,72 @@ class PaymentService {
         data: { currentSubscriptionId: null },
       });
     });
+  }
+
+  async handleUpcomingInvoice(invoicePayload) {
+    const stripeSubscriptionId = invoicePayload.subscription;
+
+    if (!stripeSubscriptionId) {
+      console.warn(
+        '[Webhook] Upcoming invoice event received without subscription id',
+      );
+      return;
+    }
+
+    const userSubscription = await prisma.vendorSubscription.findFirst({
+      where: { stripeSubscriptionId: stripeSubscriptionId },
+      include: { plan: true },
+    });
+
+    if (!userSubscription) {
+      console.warn(
+        `[Webhook] No subscription found in DB for upcoming invoice of sub: ${stripeSubscriptionId}`,
+      );
+      return;
+    }
+
+    const currentDbPriceInCents = Math.round(
+      Number(userSubscription.plan.priceMonthly) * 100,
+    );
+
+    if (invoicePayload.amount_due !== currentDbPriceInCents) {
+      try {
+        const stripeSub =
+          await stripe.subscriptions.retrieve(stripeSubscriptionId);
+        const subscriptionItemId = stripeSub.items.data[0].id;
+        await prisma.$transaction(async (tx) => {
+          await stripe.subscriptions.update(stripeSubscriptionId, {
+            items: [
+              {
+                id: subscriptionItemId,
+                price_data: {
+                  currency: 'usd',
+                  product: stripeSub.plan.product,
+                  unit_amount: currentDbPriceInCents,
+                  recurring: {
+                    interval: 'month',
+                  },
+                },
+              },
+            ],
+            proration_behavior: 'none',
+          });
+        });
+
+        console.log(
+          `[Webhook] Successfully updated upcoming price to €${userSubscription.plan.priceMonthly} for sub: ${stripeSubscriptionId}`,
+        );
+      } catch (error) {
+        console.error(
+          `[Webhook] Failed to update upcoming invoice for sub ${stripeSubscriptionId}:`,
+          error.message,
+        );
+      }
+    } else {
+      console.log(
+        `[Webhook] Price is already up-to-date (€${userSubscription.plan.priceMonthly}) for sub: ${stripeSubscriptionId}`,
+      );
+    }
   }
 }
 
