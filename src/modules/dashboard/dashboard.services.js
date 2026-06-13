@@ -9,6 +9,7 @@ class DashboardService {
       resentEnquiry,
       newLeedsEnquiry,
       lastSubscription,
+      totalRevenue,
     ] = await Promise.all([
       prisma.vendorBooking.count({
         where: { vendorId },
@@ -51,6 +52,15 @@ class DashboardService {
         },
         orderBy: { createdAt: 'desc' },
       }),
+
+      prisma.vendorBooking.aggregate({
+        where: {
+          vendorId,
+        },
+        _sum: {
+          price: true,
+        },
+      }),
     ]);
 
     // Initialize the response structure for the UI card
@@ -80,6 +90,7 @@ class DashboardService {
       totalBookings,
       upcomingWeddingCard: upcomingWeddingCard.daysRemaining,
       newLeedsEnquiry,
+      totalRevenue: totalRevenue._sum.price || 0,
       upcomingBookings,
       resentEnquiry,
     };
@@ -407,6 +418,66 @@ class DashboardService {
         hasPreviousPage: filterDTO.page > 1,
       },
     };
+  }
+
+  async getVendorAnalyticChart(vendorId, filter = 'this_year') {
+    const today = new Date();
+    let targetYear = today.getFullYear();
+
+    if (filter === 'previous_year') {
+      targetYear -= 1;
+    }
+
+    const startOfYear = new Date(targetYear, 0, 1);
+    const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+
+    const paymentsGrouped = await prisma.vendorBooking.groupBy({
+      by: ['createdAt'],
+      where: {
+        vendorId: vendorId,
+        createdAt: {
+          gte: startOfYear,
+          lte: endOfYear,
+        },
+      },
+      _sum: {
+        price: true,
+      },
+    });
+
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const monthlyDataMap = monthNames.reduce((acc, month) => {
+      acc[month] = 0;
+      return acc;
+    }, {});
+
+    paymentsGrouped.forEach((group) => {
+      if (group.createdAt) {
+        const monthIndex = group.createdAt.getMonth();
+        const monthName = monthNames[monthIndex];
+        monthlyDataMap[monthName] += group._sum.price || 0;
+      }
+    });
+
+    const chartData = monthNames.map((month) => ({
+      month,
+      revenue: Math.round(monthlyDataMap[month]),
+    }));
+
+    return chartData;
   }
 }
 

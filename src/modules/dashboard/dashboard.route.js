@@ -21,6 +21,13 @@ router.get(
 );
 
 router.get(
+  '/vendor-analytic-chart',
+  authenticate,
+  authorize(['VENDOR']),
+  controller.getVendorAnalyticChart,
+);
+
+router.get(
   '/admin-card',
   authenticate,
   authorize(['ADMIN']),

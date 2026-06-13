@@ -30,6 +30,19 @@ class DashboardController {
     res.sendSuccess(result, 'Dashboard data retrieved successfully');
   });
 
+  getVendorAnalyticChart = asyncHandler(async (req, res) => {
+    const vendorId = req.user.vendorProfileId;
+    if (!vendorId) {
+      return res.status(404).json({ message: 'Vendor profile not found' });
+    }
+    const filter = req.query.filter || 'this_year';
+    const result = await this.dashboardService.getVendorAnalyticChart(
+      vendorId,
+      filter,
+    );
+    res.sendSuccess(result, 'Dashboard data retrieved successfully');
+  });
+
   getAdminCard = asyncHandler(async (req, res) => {
     const result = await this.dashboardService.getAdminDashboardCardData();
     res.sendSuccess(result, 'Dashboard data retrieved successfully');
