@@ -1166,17 +1166,13 @@ class VendorProfileService {
 
     const { currentSubscription, ...profileWithoutSubscription } = profile;
 
-    if (!isPaidPlan) {
-      const { socialLinks, ...freePlanProfile } = profileWithoutSubscription;
-      return {
-        ...freePlanProfile,
-        isSocial: false,
-      };
-    }
+    const isSocialShow = currentSubscription.plan?.isSocialShow || false;
+    const vendorBadge = currentSubscription.plan?.badge || null;
 
     return {
       ...profileWithoutSubscription,
-      isSocial: true,
+      isSocialShow: isSocialShow,
+      vendorBadge,
     };
   }
 

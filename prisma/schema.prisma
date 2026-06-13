@@ -265,6 +265,7 @@ model CoupleTask {
   taskSection   TaskSection @relation(fields: [taskSectionId], references: [id], onDelete: Cascade)
   taskSectionId String
 
+  @@index([taskSectionId, createdAt])
   @@map("couple_tasks")
 }
 
@@ -302,6 +303,7 @@ model CoupleTimelineTask {
   coupleTimelineSection   CoupleTimelineSection @relation(fields: [coupleTimelineSectionId], references: [id])
   coupleTimelineSectionId String
 
+  @@index([coupleTimelineSectionId, createdAt])
   @@map("couple_timeline_tasks")
 }
 
@@ -318,6 +320,7 @@ model WeddingDaySchedule {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([coupleProfileId])
   @@map("wedding_day_schedules")
 }
 
@@ -331,6 +334,7 @@ model SavedVendor {
 
   createdAt DateTime @default(now())
 
+  @@unique([coupleProfileId, vendorId])
   @@map("saved_vendors")
 }
 
@@ -381,6 +385,10 @@ model VendorProfile {
   reviews            Review[]
   vendorProfileViews VendorProfileView[] @relation("VendorViews")
 
+  @@index([status, isVerified, categoryId])
+  @@index([stateId, cityId])
+  @@index([categoryId])
+  @@index([status])
   @@map("vendor_profiles")
 }
 
@@ -393,6 +401,7 @@ model VendorPortfolio {
   sortOrder Int           @default(0)
   createdAt DateTime      @default(now())
 
+  @@index([vendorId, sortOrder])
   @@map("vendor_portfolios")
 }
 
@@ -439,6 +448,7 @@ model Enquiry {
   status      EnquiryStatus @default(NEW)
   createdAt   DateTime      @default(now())
 
+  @@index([vendorId, status])
   @@map("enquiries")
 }
 
@@ -481,6 +491,7 @@ model VendorSubscription {
 
   currentForVendor VendorProfile? @relation("CurrentActiveSub")
 
+  @@index([vendorId, status])
   @@map("vendor_subscriptions")
 }
 
@@ -499,6 +510,8 @@ model Payment {
   purchaseDate DateTime @default(now())
   createdAt    DateTime @default(now())
 
+  @@index([vendorId])
+  @@index([status])
   @@map("payments")
 }
 
@@ -547,6 +560,7 @@ model VendorBooking {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([vendorId, status])
   @@map("vendor_bookings")
 }
 
