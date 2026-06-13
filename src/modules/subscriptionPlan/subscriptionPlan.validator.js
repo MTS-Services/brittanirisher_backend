@@ -22,6 +22,9 @@ const updateSubscriptionPlanSchema = Joi.object({
   validFor: Joi.string().trim().min(2).max(220).optional(),
   priceMonthly: Joi.number().precision(2).min(0).optional(),
   portfolioLimit: Joi.number().integer().min(-1).optional(),
+  badge: Joi.string().trim().min(2).max(50).optional(),
+  isAnalyticShow: Joi.boolean().optional(),
+  isSocialShow: Joi.boolean().optional(),
   featuresAllowed: Joi.array()
     .items(
       Joi.object({

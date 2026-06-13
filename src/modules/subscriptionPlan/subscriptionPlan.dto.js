@@ -28,6 +28,9 @@ class UpdateSubscriptionPlanDTO {
     this.portfolioLimit = data.portfolioLimit;
     this.featuresAllowed = data.featuresAllowed;
     this.validFor = data.validFor;
+    this.badge = data.badge;
+    this.isAnalyticShow = data.isAnalyticShow;
+    this.isSocialShow = data.isSocialShow;
   }
 
   toDatabase() {
@@ -43,6 +46,11 @@ class UpdateSubscriptionPlanDTO {
     if (this.featuresAllowed !== undefined)
       updateData.featuresAllowed = this.featuresAllowed;
     if (this.validFor !== undefined) updateData.validFor = this.validFor;
+    if (this.badge !== undefined) updateData.badge = this.badge;
+    if (this.isAnalyticShow !== undefined)
+      updateData.isAnalyticShow = this.isAnalyticShow;
+    if (this.isSocialShow !== undefined)
+      updateData.isSocialShow = this.isSocialShow;
 
     return updateData;
   }

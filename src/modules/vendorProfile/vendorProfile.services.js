@@ -475,6 +475,8 @@ class VendorProfileService {
         ? Math.max(...packagePrices)
         : null;
 
+      const vendorBadge = profile.currentSubscription?.plan?.badge || null;
+
       return {
         id: profile.id,
         name: profile.user?.name || null,
@@ -495,6 +497,7 @@ class VendorProfileService {
         },
         // subscriptionTierPrice:
         //   profile.currentSubscription?.plan?.priceMonthly || 0,
+        vendorBadge,
       };
     });
 
@@ -661,6 +664,8 @@ class VendorProfileService {
         ? Math.max(...packagePrices)
         : null;
 
+      const vendorBadge = profile.currentSubscription?.plan?.badge || null;
+
       return {
         id: profile.id,
         name: profile.user?.name || null,
@@ -679,6 +684,7 @@ class VendorProfileService {
           low: lowestPackagePrice,
           high: highestPackagePrice,
         },
+        vendorBadge,
       };
     });
 

@@ -54,6 +54,13 @@ class SubscriptionPlanService {
         ? { sortDescription: data.sortDescription.trim() }
         : {}),
       ...(data.validFor !== undefined ? { validFor: data.validFor } : {}),
+      ...(data.badge !== undefined ? { badge: data.badge.trim() } : {}),
+      ...(data.isAnalyticShow !== undefined
+        ? { isAnalyticShow: data.isAnalyticShow }
+        : {}),
+      ...(data.isSocialShow !== undefined
+        ? { isSocialShow: data.isSocialShow }
+        : {}),
     };
 
     return prisma.subscriptionPlan.update({

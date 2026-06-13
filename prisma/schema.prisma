@@ -135,10 +135,13 @@ model SubscriptionPlan {
   sortDescription String?
   stripePriceId   String?
   validFor        String?
+  badge           String?
   priceMonthly    Decimal              @db.Decimal(10, 2)
   portfolioLimit  Int                  @default(10)
   featuresAllowed Json
   isDeleted       Boolean              @default(false)
+  isAnalyticShow  Boolean              @default(false)
+  isSocialShow    Boolean              @default(false)
   createdAt       DateTime             @default(now())
   subscriptions   VendorSubscription[]
 

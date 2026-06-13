@@ -28,13 +28,31 @@ class AuthRepository {
         where: { email: email.toLowerCase() },
         select: {
           ...USER_SELECT,
+          vendorProfile: {
+            select: {
+              currentSubscription: {
+                select: { plan: true },
+              },
+            },
+          },
           ...(includePassword ? { passwordHash: true } : {}),
         },
       });
       logger.debug(
         `User lookup by email ${email}: ${user ? 'found' : 'not found'}`,
       );
-      return user;
+
+      let isAnalyticsUser = false;
+      if (
+        user &&
+        user.vendorProfile &&
+        user.vendorProfile.currentSubscription
+      ) {
+        const plan = user.vendorProfile.currentSubscription.plan;
+        isAnalyticsUser = plan.isAnalyticShow;
+      }
+
+      return { ...user, isAnalyticsUser };
     } catch (error) {
       logger.error('Error finding user by email:', error);
       throw error;

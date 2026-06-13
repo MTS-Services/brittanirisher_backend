@@ -85,6 +85,7 @@ class UserResponseDTO {
     this.lastLoginAt = user.lastLoginAt || null;
     this.createdAt = user.createdAt;
     this.updatedAt = user.updatedAt;
+    this.isAnalyticsUser = user.isAnalyticsUser || false;
   }
 }
 
