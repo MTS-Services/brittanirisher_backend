@@ -1242,6 +1242,14 @@ class VendorProfileService {
       throw new AppError('Vendor profile not found', 404);
     }
 
+    const isPaidPlan =
+      Number(profile.currentSubscription?.plan?.priceMonthly || 0) > 0;
+
+    const { currentSubscription, ...profileWithoutSubscription } = profile;
+
+    const isSocialShow = currentSubscription.plan?.isSocialShow || false;
+    const vendorBadge = currentSubscription.plan?.badge || null;
+
     const modifiedProfile = {
       id: profile.id,
       name: profile.user?.name || null,
@@ -1259,6 +1267,9 @@ class VendorProfileService {
       city: profile.city || null,
       state: profile.state || null,
       subscriptionPlan: profile.currentSubscription || null,
+      experienceYears: profile.experienceYears || null,
+      isSocialShow: isSocialShow,
+      vendorBadge,
     };
 
     return modifiedProfile;
