@@ -1257,7 +1257,7 @@ class VendorProfileService {
       phone: profile.phone || null,
       businessName: profile.businessName || null,
       location: profile.location || null,
-      category: profile.category?.name || null,
+      category: profile.category || null,
       highlightedServices: profile.highlightedServices || null,
       speciality: profile.speciality || null,
       aboutMe: profile.aboutMe || null,
