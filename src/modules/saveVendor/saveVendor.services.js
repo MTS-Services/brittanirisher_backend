@@ -57,6 +57,9 @@ class SaveVendorService {
                   name: true,
                 },
               },
+              currentSubscription: {
+                include: { plan: true },
+              },
               category: {
                 select: {
                   id: true,
@@ -86,10 +89,9 @@ class SaveVendorService {
       }),
       prisma.savedVendor.count({ where: finalWhere }),
     ]);
-    
+
     const result = profiles.map((item) => {
       const vendor = item.vendor;
-
 
       const prices = vendor.packages
         .map((pkg) => pkg.price)
@@ -115,6 +117,7 @@ class SaveVendorService {
           vendor.portfolioImages[0]?.url ||
           null,
         priceRange: priceRange,
+        vendorBadge: vendor.currentSubscription?.plan?.badge || null,
       };
     });
 

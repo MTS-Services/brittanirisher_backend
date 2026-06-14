@@ -15,7 +15,7 @@ const createCoupleProfileSchema = Joi.object({
 
 const updateCoupleProfileSchema = Joi.object({
   name: Joi.string().trim().min(2).max(150).optional(),
-  phone: Joi.string().trim().optional(),
+  phone: Joi.string().trim().allow(null, '').optional(),
   location: Joi.string().trim().min(2).max(200).optional(),
   weldingStyleId: Joi.string().trim().optional(),
   weldingDate: Joi.date().iso().optional(),

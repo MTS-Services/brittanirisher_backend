@@ -31,7 +31,7 @@ const createVendorProfileSchema = Joi.object({
 const updateVendorProfileSchema = Joi.object({
   name: Joi.string().trim().min(2).max(150).optional(),
   email: Joi.string().email().trim().optional(),
-  phone: Joi.string().trim().optional(),
+  phone: Joi.string().trim().allow(null, '').optional(),
   location: Joi.string().trim().min(2).max(200).optional(),
   businessName: Joi.string().trim().min(2).max(150).optional(),
   experienceYears: Joi.string().trim().max(100).optional(),

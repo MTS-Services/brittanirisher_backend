@@ -954,6 +954,8 @@ class VendorProfileService {
       const isSaved =
         Array.isArray(profile.savedVendors) && profile.savedVendors.length > 0;
 
+      const vendorBadge = profile.currentSubscription?.plan?.badge || null;
+
       return {
         id: profile.id,
         name: profile.user?.name || null,
@@ -972,6 +974,7 @@ class VendorProfileService {
           low: lowestPackagePrice,
           high: highestPackagePrice,
         },
+        vendorBadge,
       };
     });
 
