@@ -1149,6 +1149,8 @@ class VendorProfileService {
           orderBy: { sortOrder: 'asc' },
         },
         packages: true,
+        city: true,
+        state: true,
         currentSubscription: {
           include: {
             plan: true,
@@ -1269,6 +1271,8 @@ class VendorProfileService {
       subscriptionPlan: profile.currentSubscription || null,
       experienceYears: profile.experienceYears || null,
       isSocialShow: isSocialShow,
+      socialLinks: profile.socialLinks || null,
+      contactLinks: profile.contactLinks || null,
       vendorBadge,
     };
 
