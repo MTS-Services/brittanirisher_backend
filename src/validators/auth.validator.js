@@ -15,7 +15,7 @@ const password = Joi.string().min(8).max(128).required();
 // .message(
 //   'Password must contain at least one letter, one number and one special character',
 // );
-const strongPassword = Joi.string().min(8).max(128).required();
+const strongPassword = Joi.string().min(6).max(128).required();
 // .pattern(
 //   new RegExp(
 //     '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]',
