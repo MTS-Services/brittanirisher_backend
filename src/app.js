@@ -141,6 +141,7 @@ app.get('/', (req, res) => {
   );
 });
 
+
 // API routes
 initSubscriptionCron()
 app.use(API_PREFIX, routes);

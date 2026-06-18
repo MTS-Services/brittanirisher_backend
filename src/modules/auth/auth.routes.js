@@ -149,7 +149,6 @@ router.post(
   validate(changePasswordSchema),
   authController.changePassword,
 );
-
 /**
  * @route DELETE /api/v1/auth/account
  * @desc Delete user account
