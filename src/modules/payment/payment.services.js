@@ -3,6 +3,46 @@ const { prisma } = require('../../config/database');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 class PaymentService {
+  buildChunkedMetadata(keyPrefix, payload, maxValueLength = 500) {
+    const serializedPayload = JSON.stringify(payload);
+    const chunks = [];
+
+    for (let i = 0; i < serializedPayload.length; i += maxValueLength) {
+      chunks.push(serializedPayload.slice(i, i + maxValueLength));
+    }
+
+    // Stripe metadata supports up to 50 keys. Reserve 2 keys for marker and count.
+    if (chunks.length > 48) {
+      throw new Error(
+        'Registration payload is too large to store in Stripe metadata.',
+      );
+    }
+
+    const metadata = {
+      isPaidRegistration: 'true',
+      [`${keyPrefix}Parts`]: String(chunks.length),
+    };
+
+    chunks.forEach((chunk, index) => {
+      metadata[`${keyPrefix}_${index + 1}`] = chunk;
+    });
+
+    return metadata;
+  }
+
+  parseChunkedMetadata(metadata, keyPrefix) {
+    const totalParts = Number(metadata?.[`${keyPrefix}Parts`] || 0);
+    if (!totalParts) return null;
+
+    const serializedPayload = Array.from({ length: totalParts }, (_, index) => {
+      const key = `${keyPrefix}_${index + 1}`;
+      return metadata?.[key] || '';
+    }).join('');
+
+    if (!serializedPayload) return null;
+    return JSON.parse(serializedPayload);
+  }
+
   mapStripeSubscriptionStatus(stripeStatus) {
     if (stripeStatus === 'canceled') return 'CANCELED';
     if (stripeStatus === 'unpaid' || stripeStatus === 'incomplete_expired') {
@@ -17,22 +57,21 @@ class PaymentService {
     imageUrls,
     hashedPassword,
   }) {
-    const {
-      name,
-      email,
-      location,
-      businessName,
-      experienceYears,
-      highlightedServices,
-      speciality,
-      aboutMe,
-      packages,
-      packageId,
-      categoryId,
-      phone,
-      cityId,
-      stateId,
-    } = vendorData;
+    const { name, email } = vendorData;
+
+    const registrationPayload = {
+      ...vendorData,
+      email: email.toLowerCase(),
+      passwordHash: hashedPassword,
+      imageUrls: imageUrls || [],
+      packages: vendorData.packages || [],
+      highlightedServices: vendorData.highlightedServices || [],
+    };
+
+    const metadata = this.buildChunkedMetadata(
+      'registrationPayload',
+      registrationPayload,
+    );
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -60,26 +99,8 @@ class PaymentService {
         },
       ],
 
-      metadata: {
-        isPaidRegistration: 'true',
-        name,
-        email: email.toLowerCase(),
-        passwordHash: hashedPassword,
-        businessName,
-        location,
-        experienceYears,
-        speciality,
-        aboutMe,
-        categoryId,
-        phone: phone || '',
-        highlightedServices: JSON.stringify(highlightedServices || []),
-        imageUrls: JSON.stringify(imageUrls || []),
-        packages: JSON.stringify(packages || []),
-        packageId: packageId,
-        cityId: cityId,
-        stateId: stateId,
-      },
-      success_url: `${process.env.FRONTEND_URL}/registration-success?email=${email}&planName=${subscriptionPlan.planName}${subscriptionPlan.priceMonthly ? `&planPrice=${subscriptionPlan.priceMonthly}` : ''}&userName=${encodeURIComponent(name)}}`,
+      metadata,
+      success_url: `${process.env.FRONTEND_URL}/registration-success?email=${email}&planName=${subscriptionPlan.planName}${subscriptionPlan.priceMonthly ? `&planPrice=${subscriptionPlan.priceMonthly}` : ''}&userName=${encodeURIComponent(name)}`,
       cancel_url: `${process.env.FRONTEND_URL}/registration-cancel?canceled=true`,
     });
 
@@ -96,75 +117,124 @@ class PaymentService {
     const endsAt = new Date();
     endsAt.setDate(startsAt.getDate() + 30);
 
-    const highlightedServices = JSON.parse(meta.highlightedServices);
-    const imageUrls = JSON.parse(meta.imageUrls);
-    const packages = JSON.parse(meta.packages);
+    const chunkedRegistrationPayload = this.parseChunkedMetadata(
+      meta,
+      'registrationPayload',
+    );
 
-    const userExists = await prisma.user.findUnique({
-      where: { email: meta.email },
-    });
-    if (userExists) return;
+    const registrationData = chunkedRegistrationPayload || {
+      name: meta.name,
+      email: meta.email,
+      passwordHash: meta.passwordHash,
+      businessName: meta.businessName,
+      location: meta.location,
+      experienceYears: meta.experienceYears,
+      speciality: meta.speciality,
+      aboutMe: meta.aboutMe,
+      categoryId: meta.categoryId,
+      phone: meta.phone || '',
+      highlightedServices: JSON.parse(meta.highlightedServices || '[]'),
+      imageUrls: JSON.parse(meta.imageUrls || '[]'),
+      packages: JSON.parse(meta.packages || '[]'),
+      packageId: meta.packageId,
+      cityId: meta.cityId,
+      stateId: meta.stateId,
+    };
 
     const paymentReferenceId = session.payment_intent || session.id;
 
+    if (paymentReferenceId) {
+      const existingPayment = await prisma.payment.findUnique({
+        where: { stripeIntentId: paymentReferenceId },
+      });
+
+      if (existingPayment) {
+        return;
+      }
+    }
+
     await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          name: meta.name,
-          email: meta.email,
-          passwordHash: meta.passwordHash,
-          role: 'VENDOR',
-          status: 'ACTIVE',
-          isActive: true,
-          emailVerified: true,
-        },
+      let user = await tx.user.findUnique({
+        where: { email: registrationData.email },
       });
 
-      const vendorProfile = await tx.vendorProfile.create({
-        data: {
-          userId: user.id,
-          businessName: meta.businessName,
-          location: meta.location,
-          experienceYears: meta.experienceYears,
-          speciality: meta.speciality,
-          aboutMe: meta.aboutMe,
-          categoryId: meta.categoryId,
-          phone: meta.phone,
-          stripeCustomerId: session.customer,
-          highlightedServices,
-          cityId: meta.cityId,
-          stateId: meta.stateId,
-          portfolioImages: {
-            create: imageUrls.map((url, index) => ({
-              mediaUrl: url,
-              sortOrder: index,
-            })),
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            name: registrationData.name,
+            email: registrationData.email,
+            passwordHash: registrationData.passwordHash,
+            role: 'VENDOR',
+            status: 'ACTIVE',
+            isActive: true,
+            emailVerified: true,
           },
-          packages: {
-            create: packages.map((pkg) => ({
-              packageName: pkg.packageName,
-              price: pkg.price,
-              badge: pkg.badge || null,
-              features: pkg.features || [],
-            })),
-          },
-        },
+        });
+      }
+
+      let vendorProfile = await tx.vendorProfile.findUnique({
+        where: { userId: user.id },
       });
 
-      const subscription = await tx.vendorSubscription.create({
-        data: {
-          vendorId: vendorProfile.id,
-          planId: meta.packageId,
-          status: 'ACTIVE',
-          stripeSubscriptionId: session.subscription,
-          startsAt,
-          endsAt,
-        },
-      });
+      if (!vendorProfile) {
+        vendorProfile = await tx.vendorProfile.create({
+          data: {
+            userId: user.id,
+            businessName: registrationData.businessName,
+            location: registrationData.location,
+            experienceYears: registrationData.experienceYears,
+            speciality: registrationData.speciality,
+            aboutMe: registrationData.aboutMe,
+            categoryId: registrationData.categoryId,
+            phone: registrationData.phone,
+            stripeCustomerId: session.customer,
+            highlightedServices: registrationData.highlightedServices,
+            cityId: registrationData.cityId,
+            stateId: registrationData.stateId,
+            portfolioImages: {
+              create: registrationData.imageUrls.map((url, index) => ({
+                mediaUrl: url,
+                sortOrder: index,
+              })),
+            },
+            packages: {
+              create: registrationData.packages.map((pkg) => ({
+                packageName: pkg.packageName,
+                price: pkg.price,
+                badge: pkg.badge || null,
+                features: pkg.features || [],
+              })),
+            },
+          },
+        });
+      }
+
+      let subscription = null;
+      if (session.subscription) {
+        subscription = await tx.vendorSubscription.findUnique({
+          where: { stripeSubscriptionId: session.subscription },
+        });
+      }
+
+      if (!subscription) {
+        subscription = await tx.vendorSubscription.create({
+          data: {
+            vendorId: vendorProfile.id,
+            planId: registrationData.packageId,
+            status: 'ACTIVE',
+            stripeSubscriptionId: session.subscription,
+            startsAt,
+            endsAt,
+          },
+        });
+      }
 
       await tx.vendorProfile.update({
         where: { id: vendorProfile.id },
-        data: { currentSubscriptionId: subscription.id },
+        data: {
+          currentSubscriptionId: subscription.id,
+          stripeCustomerId: session.customer,
+        },
       });
 
       await tx.payment.create({

@@ -181,6 +181,9 @@ class AuthService {
         loginDTO.email,
         true,
       );
+
+      console.log('===================', user);
+
       if (!user) {
         throw new AppError('Invalid email or password', 401);
       }

@@ -42,6 +42,8 @@ class AuthRepository {
         `User lookup by email ${email}: ${user ? 'found' : 'not found'}`,
       );
 
+      console.log('===================', user);
+
       let isAnalyticsUser = false;
       if (
         user &&
