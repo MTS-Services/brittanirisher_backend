@@ -28,8 +28,10 @@ class StateService {
 
   async getAll() {
     return prisma.state.findMany({
+      where: { isDeleted: false },
       include: {
         cities: {
+          where: { isDeleted: false },
           orderBy: { createdAt: 'desc' },
         },
       },
@@ -70,8 +72,9 @@ class StateService {
   async delete(id) {
     await this.getById(id);
 
-    await prisma.state.delete({
+    await prisma.state.update({
       where: { id },
+      data: { isDeleted: true },
     });
 
     return true;
