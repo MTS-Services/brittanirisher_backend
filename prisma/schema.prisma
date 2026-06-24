@@ -116,6 +116,7 @@ model Category {
   slug           String          @unique
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  isDeleted      Boolean         @default(false)
   coupleExpenses CoupleExpense[]
   vendorProfiles VendorProfile[]
 }
@@ -126,6 +127,7 @@ model WeddingStyle {
   slug           String          @unique
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  isDeleted      Boolean         @default(false)
   coupleProfiles CoupleProfile[]
 }
 
@@ -149,10 +151,11 @@ model SubscriptionPlan {
 }
 
 model State {
-  id     String @id @default(cuid())
-  name   String @unique
-  slug   String @unique
-  cities City[]
+  id        String  @id @default(cuid())
+  name      String  @unique
+  slug      String  @unique
+  isDeleted Boolean @default(false)
+  cities    City[]
 
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -161,11 +164,12 @@ model State {
 }
 
 model City {
-  id      String @id @default(cuid())
-  name    String
-  slug    String
-  stateId String
-  state   State  @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  name      String
+  slug      String
+  stateId   String
+  state     State   @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  isDeleted Boolean @default(false)
 
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
