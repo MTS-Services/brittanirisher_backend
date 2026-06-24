@@ -25,6 +25,7 @@ class WeddingStyleService {
 
   async getWeddingStyles() {
     return prisma.weddingStyle.findMany({
+      where: { isDeleted: false },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -62,8 +63,9 @@ class WeddingStyleService {
   async deleteWeddingStyle(id) {
     await this.getWeddingStyleById(id);
 
-    await prisma.weddingStyle.delete({
+    await prisma.weddingStyle.update({
       where: { id },
+      data: { isDeleted: true },
     });
 
     return true;
