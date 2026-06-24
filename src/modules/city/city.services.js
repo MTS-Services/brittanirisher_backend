@@ -28,7 +28,7 @@ class CityService {
 
   async getAll(stateId) {
     return prisma.city.findMany({
-      where: { stateId },
+      where: { stateId, isDeleted: false },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -66,7 +66,8 @@ class CityService {
   async delete(id) {
     await this.getById(id);
 
-    await prisma.city.delete({
+    await prisma.city.update({
+      data: { isDeleted: true },
       where: { id },
     });
 
