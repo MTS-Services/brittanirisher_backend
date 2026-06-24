@@ -27,6 +27,7 @@ class CategoryService {
 
   async getCategories() {
     return prisma.category.findMany({
+      where: { isDeleted: false },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -64,8 +65,9 @@ class CategoryService {
   async deleteCategory(id) {
     await this.getCategoryById(id);
 
-    await prisma.category.delete({
+    await prisma.category.update({
       where: { id },
+      data: { isDeleted: true },
     });
 
     return true;
